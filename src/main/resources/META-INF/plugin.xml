@@ -1,0 +1,54 @@
+<idea-plugin version="2">
+	<id>com.gigaide.angular.ts</id>
+	<name>Angular ANTLR TypeScript</name>
+	<version>0.1</version>
+	<vendor email="parrt@antlr.org" url="https://github.com/parrt/sample-jetbrains-plugin">ANTLR Project</vendor>
+
+	<description><![CDATA[
+  <p>TypeScript language support via ANTLR grammar. Files with .ts extension.</p>
+  ]]></description>
+
+	<change-notes><![CDATA[
+        ]]>
+	</change-notes>
+
+	<idea-version since-build="251"/>
+
+	<depends>com.intellij.modules.lang</depends>
+
+    <incompatible-with>com.gigaide.javascript</incompatible-with>
+
+	<application-components>
+	</application-components>
+
+	<project-components>
+		<component>
+			<implementation-class>org.antlr.jetbrains.sample.SamplePluginController</implementation-class>
+		</component>
+	</project-components>
+
+	<actions>
+	</actions>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<fileTypeFactory implementation="org.antlr.jetbrains.sample.TypeScriptFileTypeFactory"/>
+		<lang.syntaxHighlighterFactory language="ANTLRTypeScript"
+									   implementationClass="org.antlr.jetbrains.sample.TypeScriptSyntaxHighlighterFactory"/>
+
+		<lang.parserDefinition language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptParserDefinition"/>
+		<lang.ast.factory language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptASTFactory"/>
+
+		<lang.psiStructureViewFactory language="ANTLRTypeScript"
+									  implementationClass="org.antlr.jetbrains.sample.structview.TypeScriptStructureViewFactory"/>
+
+		<colorSettingsPage implementation="org.antlr.jetbrains.sample.TypeScriptColorSettingsPage"/>
+
+		<externalAnnotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptExternalAnnotator"/>
+
+		<annotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptDecoratorAnnotator"/>
+		<annotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.AngularTemplateAnnotator"/>
+
+		<lang.findUsagesProvider language="ANTLRTypeScript"
+								 implementationClass="org.antlr.jetbrains.sample.TypeScriptFindUsagesProvider"/>
+	</extensions>
+</idea-plugin>
