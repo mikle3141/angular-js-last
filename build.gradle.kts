@@ -139,10 +139,12 @@ dependencies {
 
 intellijPlatform {
     pluginConfiguration {
-        name.set("Angular ANTLR TypeScript")
-        version.set(pluginVersion)
+        id = properties("pluginId")
+        name = properties("pluginName")
+        version = project.version as String
         ideaVersion {
-            untilBuild.set(provider { null })
+            sinceBuild = properties("pluginSinceBuild")
+            untilBuild = properties("pluginUntilBuild")
         }
     }
 }
@@ -153,4 +155,41 @@ tasks.named("verifyPluginProjectConfiguration") {
 
 tasks.named<org.gradle.api.plugins.antlr.AntlrTask>("generateGrammarSource") {
     arguments = arguments + listOf("-package", "org.antlr.jetbrains.sample.parser", "-Xexact-output-dir")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = properties("pluginId")
+            groupId = project.group as String
+            version = project.version as String
+            artifact("build/distributions/${project.name}-${project.version}.zip") {
+                extension = "zip"
+            }
+        }
+    }
+    repositories {
+        maven {
+            val releaseUrl = "https://nexus-ci.delta.sbrf.ru/repository/maven-lib-release"
+            val snapshotUrl = "https://nexus-ci.delta.sbrf.ru/repository/maven-lib-dev"
+            url = uri(if (isRelease) releaseUrl else snapshotUrl)
+            credentials {
+                username = System.getProperty("gradle.wrapperUser")
+                password = System.getProperty("gradle.wrapperPassword")
+            }
+        }
+    }
+}
+
+tasks.named("publishAllPublicationsToMavenRepository") {
+    dependsOn("buildPlugin")
+}
+tasks.named("publishMavenPublicationToMavenLocal") {
+    dependsOn("buildPlugin")
+}
+tasks.named("publishMavenPublicationToMavenRepository") {
+    dependsOn("buildPlugin")
+}
+tasks.named("publishToMavenLocal") {
+    dependsOn("buildPlugin")
 }
