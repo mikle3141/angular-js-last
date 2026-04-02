@@ -2,7 +2,7 @@
 	<id>com.gigaide.angular.ts</id>
 	<name>Angular ANTLR TypeScript</name>
 	<version>0.1</version>
-	<vendor email="parrt@antlr.org" url="https://github.com/parrt/sample-jetbrains-plugin">ANTLR Project</vendor>
+	<vendor email="gigaide@sberbank.ru" url="https://gigaide.ru">GIGAIDE</vendor>
 
 	<description><![CDATA[
   <p>TypeScript language support via ANTLR grammar. Files with .ts extension.</p>
