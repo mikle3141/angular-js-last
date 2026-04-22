@@ -72,6 +72,10 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
                         if (tagName == null || tagName.isEmpty()) {
                             return PsiReference.EMPTY_ARRAY;
                         }
+                        if (!tagName.contains("-")) {
+                            LOG.debug("[AngularRef] skip non-component tag (no hyphen): " + tagName);
+                            return PsiReference.EMPTY_ARRAY;
+                        }
                         PsiFile containingFile = tag.getContainingFile();
                         if (containingFile == null || !containingFile.getName().endsWith(".html")) {
                             LOG.debug("[AngularRef] skip non-html file=" + (containingFile == null ? "null" : containingFile.getName()));
