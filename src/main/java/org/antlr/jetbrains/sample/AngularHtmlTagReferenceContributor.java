@@ -185,7 +185,9 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
     private static void collectSelectors(@NotNull PsiFile tsFile,
                                          @NotNull String text,
                                          @NotNull Map<String, SmartPsiElementPointer<PsiElement>> target) {
-        Matcher selectorMatcher = SELECTOR_PATTERN.matcher(text);
+        // Remove comments before searching for selectors
+        String codeWithoutComments = removeComments(text);
+        Matcher selectorMatcher = SELECTOR_PATTERN.matcher(codeWithoutComments);
         while (selectorMatcher.find()) {
             PsiElement selectorLeaf = tsFile.findElementAt(selectorMatcher.start(2));
             if (selectorLeaf != null) {
@@ -196,6 +198,103 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
                 );
             }
         }
+    }
+
+    private static String removeComments(@NotNull String text) {
+        StringBuilder result = new StringBuilder(text.length());
+        int i = 0;
+        while (i < text.length()) {
+            // Check for block comment
+            if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '*') {
+                // Skip until end of block comment
+                i += 2;
+                while (i + 1 < text.length() && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/')) {
+                    i++;
+                }
+                if (i + 1 < text.length()) {
+                    i += 2; // Skip */
+                }
+                // Replace comment with spaces to preserve positions
+                result.append(' ');
+            }
+            // Check for line comment
+            else if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '/') {
+                // Skip until end of line
+                while (i < text.length() && text.charAt(i) != '\n') {
+                    i++;
+                }
+                if (i < text.length()) {
+                    i++; // Skip newline
+                }
+                // Replace comment with spaces to preserve positions
+                result.append(' ');
+            }
+            // Check for template string (backtick)
+            else if (text.charAt(i) == '`') {
+                result.append(text.charAt(i));
+                i++;
+                // Skip until end of template string
+                while (i < text.length()) {
+                    char c = text.charAt(i);
+                    if (c == '\\' && i + 1 < text.length()) {
+                        result.append(c).append(text.charAt(i + 1));
+                        i += 2;
+                    } else if (c == '`') {
+                        result.append(c);
+                        i++;
+                        break;
+                    } else {
+                        result.append(c);
+                        i++;
+                    }
+                }
+            }
+            // Check for single quote string
+            else if (text.charAt(i) == '\'') {
+                result.append(text.charAt(i));
+                i++;
+                // Skip until end of single quote string
+                while (i < text.length()) {
+                    char c = text.charAt(i);
+                    if (c == '\\' && i + 1 < text.length()) {
+                        result.append(c).append(text.charAt(i + 1));
+                        i += 2;
+                    } else if (c == '\'') {
+                        result.append(c);
+                        i++;
+                        break;
+                    } else {
+                        result.append(c);
+                        i++;
+                    }
+                }
+            }
+            // Check for double quote string
+            else if (text.charAt(i) == '"') {
+                result.append(text.charAt(i));
+                i++;
+                // Skip until end of double quote string
+                while (i < text.length()) {
+                    char c = text.charAt(i);
+                    if (c == '\\' && i + 1 < text.length()) {
+                        result.append(c).append(text.charAt(i + 1));
+                        i += 2;
+                    } else if (c == '"') {
+                        result.append(c);
+                        i++;
+                        break;
+                    } else {
+                        result.append(c);
+                        i++;
+                    }
+                }
+            }
+            else {
+                result.append(text.charAt(i));
+                i++;
+            }
+        }
+        return result.toString();
     }
 
     private static final class SelectorIndex {
