@@ -24,9 +24,6 @@ tasks.compileJava {
 }
 
 val isRelease = System.getProperty("release").toBoolean()
-val oscToken: String = System.getProperty("gradle.wrapperOscToken")
-val mavenUser: String = System.getProperty("gradle.wrapperUser")
-val mavenPassword: String = System.getProperty("gradle.wrapperPassword")
 
 group = properties("pluginGroup")
 version = properties("pluginVersion")
