@@ -50,7 +50,7 @@
 
 		<lang.findUsagesProvider language="ANTLRTypeScript"
 								 implementationClass="org.antlr.jetbrains.sample.TypeScriptFindUsagesProvider"/>
-		<psi.referenceontributor language="HTML"
+		<psi.referenceContributor language="HTML"
 								 implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
 		<psi.referenceContributor language="XML"
 								  implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
