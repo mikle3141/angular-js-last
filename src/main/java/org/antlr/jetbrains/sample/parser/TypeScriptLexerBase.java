@@ -44,10 +44,18 @@ public abstract class TypeScriptLexerBase extends Lexer {
     }
 
     public void DecreaseTemplateDepth() {
-        templateDepth--;
+        if (templateDepth > 1) {
+            templateDepth--;
+        }
     }
 
     public void StartTemplateString() {
         templateDepth++;
+    }
+
+    public void EndTemplateString() {
+        if (templateDepth > 1) {
+            templateDepth--;
+        }
     }
 }

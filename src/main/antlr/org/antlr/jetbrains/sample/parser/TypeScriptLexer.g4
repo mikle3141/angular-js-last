@@ -55,7 +55,7 @@ CloseBracket               : ']';
 OpenParen                  : '(';
 CloseParen                 : ')';
 OpenBrace                  : '{' {this.ProcessOpenBrace();};
-TemplateCloseBrace         :     {this.IsInTemplateString()}? '}' -> popMode;
+TemplateCloseBrace         : {this.templateDepth > 1 && this.IsInTemplateString()}? '}' {this.EndTemplateString();} -> popMode;
 CloseBrace                 : '}' {this.ProcessCloseBrace();};
 SemiColon                  : ';';
 Comma                      : ',';
@@ -251,7 +251,7 @@ UnexpectedCharacter : .                     -> channel(ERROR);
 mode TEMPLATE;
 
 TemplateStringEscapeAtom      : '\\' .;
-BackTickInside                : '`'  {this.DecreaseTemplateDepth();} -> type(BackTick), popMode;
+BackTickInside                : {this.IsInTemplateString()}? '`' {this.DecreaseTemplateDepth();} -> type(BackTick), popMode;
 TemplateStringStartExpression : '${' {this.StartTemplateString();} -> pushMode(DEFAULT_MODE);
 TemplateStringAtom            : ~[`\\];
 

@@ -10,7 +10,7 @@ import com.intellij.openapi.util.SystemInfo;
 import org.jetbrains.annotations.NotNull;
 
 public class SamplePluginController implements ProjectComponent {
-	public static final String PLUGIN_ID = "org.antlr.jetbrains.sample";
+	public static final String PLUGIN_ID = "com.gigaide.angular.ts";
 	public static final Logger LOG = Logger.getInstance("SamplePluginController");
 
 	public Project project;
