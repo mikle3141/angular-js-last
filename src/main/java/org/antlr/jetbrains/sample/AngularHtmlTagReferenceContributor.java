@@ -158,7 +158,13 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
     }
 
     static @Nullable PsiElement resolveSelector(@NotNull Project project, @NotNull String selector) {
-        return getOrBuildSelectorIndex(project).resolve(selector);
+        SelectorIndex index = getOrBuildSelectorIndex(project);
+        LOG.debug("[AngularRef] resolveSelector: '" + selector + "', index size=" + index.allSelectors().size() + ", contains=" + index.allSelectors().contains(selector));
+        PsiElement result = index.resolve(selector);
+        if (result != null) {
+            LOG.debug("[AngularRef] resolved selector '" + selector + "' to " + result.getContainingFile().getName() + ":" + result.getTextOffset());
+        }
+        return result;
     }
 
     private static @NotNull SelectorIndex buildSelectorIndex(@NotNull Project project) {
@@ -170,12 +176,15 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
         for (VirtualFile vf : files) {
             PsiFile psi = psiManager.findFile(vf);
             if (psi == null) {
+                LOG.debug("[AngularRef] psi == null for file " + vf.getPath());
                 continue;
             }
             String text = psi.getText();
             if (!text.contains("selector") || !text.contains("@Component")) {
+                LOG.debug("[AngularRef] skipping file " + psi.getName() + " (no selector or @Component)");
                 continue;
             }
+            LOG.debug("[AngularRef] checking file " + psi.getName() + ", text length=" + text.length());
             collectSelectors(psi, text, selectors);
         }
         LOG.debug("[AngularRef] selector index built size=" + selectors.size());
@@ -185,28 +194,41 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
     private static void collectSelectors(@NotNull PsiFile tsFile,
                                          @NotNull String text,
                                          @NotNull Map<String, SmartPsiElementPointer<PsiElement>> target) {
-        // Remove comments before searching for selectors
-        String codeWithoutComments = removeComments(text);
-        Matcher selectorMatcher = SELECTOR_PATTERN.matcher(codeWithoutComments);
+        Matcher selectorMatcher = SELECTOR_PATTERN.matcher(text);
+        int foundCount = 0;
+        int skippedCount = 0;
         while (selectorMatcher.find()) {
-            PsiElement selectorLeaf = tsFile.findElementAt(selectorMatcher.start(2));
+            int matchStart = selectorMatcher.start(2);
+            int matchEnd = selectorMatcher.end(2);
+            String matchedText = selectorMatcher.group(2);
+            // Check if this match is inside a comment
+            if (isInsideComment(text, matchStart, matchEnd)) {
+                LOG.debug("[AngularRef] skipping selector '" + matchedText + "' at [" + matchStart + "," + matchEnd + ") - inside comment");
+                skippedCount++;
+                continue;
+            }
+            PsiElement selectorLeaf = tsFile.findElementAt(matchStart);
             if (selectorLeaf != null) {
                 String selectorValue = selectorMatcher.group(2);
                 target.putIfAbsent(
                         selectorValue,
                         SmartPointerManager.getInstance(tsFile.getProject()).createSmartPsiElementPointer(selectorLeaf)
                 );
+                LOG.debug("[AngularRef] found selector '" + selectorValue + "' at " + selectorLeaf.getText());
+                foundCount++;
+            } else {
+                LOG.debug("[AngularRef] null element at matchStart=" + matchStart);
             }
         }
+        LOG.debug("[AngularRef] collectSelectors: found=" + foundCount + ", skipped=" + skippedCount + " in " + tsFile.getName());
     }
 
-    private static String removeComments(@NotNull String text) {
-        StringBuilder result = new StringBuilder(text.length());
+    static boolean isInsideComment(@NotNull String text, int start, int end) {
         int i = 0;
         while (i < text.length()) {
             // Check for block comment
             if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '*') {
-                // Skip until end of block comment
+                int commentStart = i;
                 i += 2;
                 while (i + 1 < text.length() && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/')) {
                     i++;
@@ -214,11 +236,16 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
                 if (i + 1 < text.length()) {
                     i += 2; // Skip */
                 }
-                // Replace comment with spaces to preserve positions
-                result.append(' ');
+                int commentEnd = i;
+                // Check if [start, end) overlaps with [commentStart, commentEnd)
+                if (start < commentEnd && end > commentStart) {
+                    return true;
+                }
+                continue;
             }
             // Check for line comment
-            else if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '/') {
+            if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '/') {
+                int commentStart = i;
                 // Skip until end of line
                 while (i < text.length() && text.charAt(i) != '\n') {
                     i++;
@@ -226,75 +253,34 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
                 if (i < text.length()) {
                     i++; // Skip newline
                 }
-                // Replace comment with spaces to preserve positions
-                result.append(' ');
+                int commentEnd = i;
+                // Check if [start, end) overlaps with [commentStart, commentEnd)
+                if (start < commentEnd && end > commentStart) {
+                    return true;
+                }
+                continue;
             }
-            // Check for template string (backtick)
-            else if (text.charAt(i) == '`') {
-                result.append(text.charAt(i));
+            // Skip strings - we don't need to check them because the regex already matches
+            // only content inside quotes, and those quotes are not inside comments.
+            if (text.charAt(i) == '`' || text.charAt(i) == '\'' || text.charAt(i) == '"') {
+                char quote = text.charAt(i);
                 i++;
-                // Skip until end of template string
                 while (i < text.length()) {
                     char c = text.charAt(i);
                     if (c == '\\' && i + 1 < text.length()) {
-                        result.append(c).append(text.charAt(i + 1));
-                        i += 2;
-                    } else if (c == '`') {
-                        result.append(c);
+                        i += 2; // Skip escaped char
+                    } else if (c == quote) {
                         i++;
                         break;
                     } else {
-                        result.append(c);
                         i++;
                     }
                 }
+                continue;
             }
-            // Check for single quote string
-            else if (text.charAt(i) == '\'') {
-                result.append(text.charAt(i));
-                i++;
-                // Skip until end of single quote string
-                while (i < text.length()) {
-                    char c = text.charAt(i);
-                    if (c == '\\' && i + 1 < text.length()) {
-                        result.append(c).append(text.charAt(i + 1));
-                        i += 2;
-                    } else if (c == '\'') {
-                        result.append(c);
-                        i++;
-                        break;
-                    } else {
-                        result.append(c);
-                        i++;
-                    }
-                }
-            }
-            // Check for double quote string
-            else if (text.charAt(i) == '"') {
-                result.append(text.charAt(i));
-                i++;
-                // Skip until end of double quote string
-                while (i < text.length()) {
-                    char c = text.charAt(i);
-                    if (c == '\\' && i + 1 < text.length()) {
-                        result.append(c).append(text.charAt(i + 1));
-                        i += 2;
-                    } else if (c == '"') {
-                        result.append(c);
-                        i++;
-                        break;
-                    } else {
-                        result.append(c);
-                        i++;
-                    }
-                }
-            }
-            else {
-                result.append(text.charAt(i));
-                i++;
-            }
+            i++;
         }
-        return result.toString();
+        return false;
     }
 
     private static final class SelectorIndex {
@@ -306,7 +292,15 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
 
         private @Nullable PsiElement resolve(@NotNull String selector) {
             SmartPsiElementPointer<PsiElement> pointer = selectors.get(selector);
-            return pointer == null ? null : pointer.getElement();
+            if (pointer == null) {
+                LOG.debug("[AngularRef] selector '" + selector + "' not found in index");
+                return null;
+            }
+            PsiElement element = pointer.getElement();
+            if (element == null) {
+                LOG.debug("[AngularRef] pointer for selector '" + selector + "' returned null element (stale reference)");
+            }
+            return element;
         }
 
         private @NotNull List<String> allSelectors() {

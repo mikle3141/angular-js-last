@@ -93,18 +93,21 @@ public class AngularHtmlGotoDeclarationHandler implements GotoDeclarationHandler
         Collection<VirtualFile> files = FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project));
         LOG.debug("[AngularGoto] scanning ts files count=" + files.size() + " for selector=" + selector);
         PsiManager psiManager = PsiManager.getInstance(project);
+        int fileCount = 0;
         for (VirtualFile vf : files) {
+            fileCount++;
             PsiFile tsFile = psiManager.findFile(vf);
             if (tsFile == null) {
                 continue;
             }
+            LOG.debug("[AngularGoto] checking file " + fileCount + ": " + tsFile.getName());
             PsiElement target = findSelectorInFile(tsFile, selector);
             if (target != null) {
-                LOG.debug("[AngularGoto] found selector inn file " + tsFile.getName());
+                LOG.debug("[AngularGoto] found selector in file " + tsFile.getName());
                 return target;
             }
         }
-        LOG.debug("[AngularGoto] selector not found in ts files: " + selector);
+        LOG.debug("[AngularGoto] selector not found in ts files: " + selector + ", total files checked=" + fileCount);
         return null;
     }
 
@@ -207,17 +210,93 @@ public class AngularHtmlGotoDeclarationHandler implements GotoDeclarationHandler
 
     private static @Nullable PsiElement findSelectorInFile(@NotNull PsiFile tsFile, @NotNull String targetSelector) {
         String text = tsFile.getText();
-        Matcher selectorMatcher = SELECTOR_PATTERN.matcher((text));
+        Matcher selectorMatcher = SELECTOR_PATTERN.matcher(text);
+        int foundCount = 0;
+        int skippedCount = 0;
         while (selectorMatcher.find()) {
+            int matchStart = selectorMatcher.start(2);
+            int matchEnd = selectorMatcher.end(2);
+            String matchedText = selectorMatcher.group(2);
+            // Check if this match is inside a comment
+            if (isInsideComment(text, matchStart, matchEnd)) {
+                LOG.debug("[AngularGoto] skipping selector '" + matchedText + "' at [" + matchStart + "," + matchEnd + ") - inside comment");
+                skippedCount++;
+                continue;
+            }
             String selectorValue = selectorMatcher.group(2);
             if (!targetSelector.equals(selectorValue)) {
                 continue;
             }
-            PsiElement selectorLeaf = tsFile.findElementAt(selectorMatcher.start(2));
+            PsiElement selectorLeaf = tsFile.findElementAt(matchStart);
+            foundCount++;
             if (selectorLeaf != null) {
+                LOG.debug("[AngularGoto] found selector '" + targetSelector + "' at offset " + matchStart + ", element: " + selectorLeaf.getClass().getName());
                 return selectorLeaf;
+            } else {
+                LOG.debug("[AngularGoto] null element at matchStart=" + matchStart);
             }
         }
+        LOG.debug("[AngularGoto] findSelectorInFile: tsFile=" + tsFile.getName() + ", targetSelector='" + targetSelector + "', found=" + foundCount + ", skipped=" + skippedCount);
         return null;
+    }
+
+    private static boolean isInsideComment(@NotNull String text, int start, int end) {
+        int i = 0;
+        while (i < text.length()) {
+            // Check for block comment
+            if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '*') {
+                int commentStart = i;
+                i += 2;
+                while (i + 1 < text.length() && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/')) {
+                    i++;
+                }
+                if (i + 1 < text.length()) {
+                    i += 2; // Skip */
+                }
+                int commentEnd = i;
+                // Check if [start, end) overlaps with [commentStart, commentEnd)
+                if (start < commentEnd && end > commentStart) {
+                    return true;
+                }
+                continue;
+            }
+            // Check for line comment
+            if (i + 1 < text.length() && text.charAt(i) == '/' && text.charAt(i + 1) == '/') {
+                int commentStart = i;
+                // Skip until end of line
+                while (i < text.length() && text.charAt(i) != '\n') {
+                    i++;
+                }
+                if (i < text.length()) {
+                    i++; // Skip newline
+                }
+                int commentEnd = i;
+                // Check if [start, end) overlaps with [commentStart, commentEnd)
+                if (start < commentEnd && end > commentStart) {
+                    return true;
+                }
+                continue;
+            }
+            // Skip strings - we don't need to check them because the regex already matches
+            // only content inside quotes, and those quotes are not inside comments.
+            if (text.charAt(i) == '`' || text.charAt(i) == '\'' || text.charAt(i) == '"') {
+                char quote = text.charAt(i);
+                i++;
+                while (i < text.length()) {
+                    char c = text.charAt(i);
+                    if (c == '\\' && i + 1 < text.length()) {
+                        i += 2; // Skip escaped char
+                    } else if (c == quote) {
+                        i++;
+                        break;
+                    } else {
+                        i++;
+                    }
+                }
+                continue;
+            }
+            i++;
+        }
+        return false;
     }
 }
