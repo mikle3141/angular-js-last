@@ -207,6 +207,9 @@ public class AngularHtmlGotoDeclarationHandler implements GotoDeclarationHandler
 
     private static @Nullable PsiElement findSelectorInFile(@NotNull PsiFile tsFile, @NotNull String targetSelector) {
         String text = tsFile.getText();
+        if (!text.contains("@Component")) {
+            return null;
+        }
         Matcher selectorMatcher = SELECTOR_PATTERN.matcher((text));
         while (selectorMatcher.find()) {
             String selectorValue = selectorMatcher.group(2);

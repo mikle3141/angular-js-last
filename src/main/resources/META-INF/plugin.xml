@@ -54,9 +54,9 @@
 								 implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
 		<psi.referenceContributor language="XML"
 								  implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
-		<completion.contributor language="HTML"
-								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
-		<completion.contributor language="XML"
+<!--		<completion.contributor language="HTML"-->
+<!--								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>-->
+		<completion.contributor language="any"
 								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
 		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularHtmlGotoDeclarationHandler"/>
 	</extensions>
