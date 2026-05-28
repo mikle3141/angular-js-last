@@ -18,6 +18,7 @@
 	<depends>com.intellij.modules.xml</depends>
 
     <incompatible-with>com.gigaide.javascript</incompatible-with>
+    <incompatible-with>JavaScript</incompatible-with>
 
 	<application-components>
 	</application-components>

@@ -1,55 +1,176 @@
-# Sample IntelliJ plugin using ANTLR grammar
+# Angular JS — IntelliJ плагин с поддержкой TypeScript через ANTLR
 
-This is a demonstration of [ANTLRv4 library for IntelliJ plugins](https://github.com/antlr/antlr4-intellij-adaptor/), 
-which makes it easy to create plugins for IntelliJ-based IDEs based on an ANTLRv4 grammar.
+Плагин предоставляет поддержку языка TypeScript в IntelliJ-based IDE на основе ANTLRv4 грамматики. Он предназначен для работы с TypeScript файлами (`.ts`) и интегрируется с Angular HTML шаблонами, обеспечивая подсветку синтаксиса, автоподстановку и навигацию.
 
-<img src=screenshot.png>
+## Основные возможности
 
-## Running the plugin for the first time
+- **Синтаксическая подсветка** TypeScript кода
+- **Анализатор PSI** для TypeScript языка
+- **Структурный обзор** (Structure View) TypeScript файлов
+- **Поиск объявлений** и ссылок в Angular HTML шаблонах
+- **Автоподстановки** для Angular HTML тегов
+- **Красные подсветки ошибок** через аннотаторы
 
-Make sure the Gradle plugin is installed in your IDE, go to `File -> Open`, select the `build.gradle` file
-and choose `Open as Project`. 
+## Технологии
 
-If you already imported the project when it was not based on Gradle, then choose the option to delete the existing 
-project and reimport it.
+- **Java 17**
+- **Gradle 8.13** (Kotlin DSL)
+- **ANTLR 4.13.1** — генератор лексера и парсера
+- **IntelliJ Platform 2025.1.3** (Community Edition)
+- **Gradle IntelliJ Platform plugin** — сборка и запуск плагина
 
-Once the IDE is done downloading dependencies and refreshing the project, you can use the `Gradle` tool window
-and use the following `Tasks`:
-* `build > assemble` to build the project
-* `intellij > runIde` to run the plugin in a sandboxed instance
+## Предварительные требования
 
-## Noteworthy things
+- Java 17 или выше
+- IntelliJ IDEA с плагином Gradle (или любая IntelliJ-based IDE)
 
-### Gradle build
-The build is based on Gradle, and uses the [gradle-intellij-plugin](https://github.com/JetBrains/gradle-intellij-plugin),
-which makes it easy to:
+## Установка и первичная настройка
 
-* pull dependencies, especially the IntelliJ SDK and `antlr4-intellij-adaptor`
-* build and run tests in a CI environment on different versions of the SDK
-* generate lexers & parsers from your grammars, thanks to the [ANTLR plugin for Gradle](https://docs.gradle.org/current/userguide/antlr_plugin.html)
-* publish plugins to the [JetBrains Plugins Repository](https://plugins.jetbrains.com/)
-* configure the project for occasional contributors 🙂
+1. Откройте проект в IntelliJ IDEA через `File -> Open`
+2. Выберите `build.gradle.kts` и откройте как проект Gradle
+3. Дождитесь завершения импорта и загрузки зависимостей
 
-### ANTLRPsiNode
+## Основные команды Gradle
 
-PSI nodes defined in the plugin extend `ANTLRPsiNode` and `IdentifierDefSubtree`, which automatically
-makes them `PsiNameIdentifierOwner`s.
+### Сборка и запуск
 
-### Error highlighting
+```bash
+# Собрать плагин (без создания дистрибутива)
+./gradlew assemble
 
-Errors are shown by `SampleExternalAnnotator`, which makes use of `org.antlr.intellij.adaptor.xpath.XPath` to
-detect references to unknown functions.
+# Собрать полный плагин с созданием ZIP-архива
+./gradlew buildPlugin
 
-### ParserDefinition
+# Запустить плагин в изолированной среде IDE
+./gradlew runIde
 
-`SampleParserDefinition` uses several handy classes from the adaptor library:
+# Собрать и установить в локальный Maven репозиторий
+./gradlew install
+```
 
-* `PSIElementTypeFactory` to generate `IElementType`s from tokens and rules defined in your ANTLRv4 grammar
-* `ANTLRLexerAdaptor` to bind generated lexers to a `com.intellij.lexer.Lexer`
-* `ANTLRParserAdaptor` to bind generated parsers to a `com.intellij.lang.PsiParser`
+### Тестирование
 
-## Misc
+```bash
+# Запустить все тесты
+./gradlew test
 
-**WARNING**. Turn on Dragon speech recognition for Mac and do a rename.
-GUI deadlocks.  Every time. Turn off dragon. No problem ever.
-See [JetBrains forum](https://devnet.jetbrains.com/message/5566967#5566967).
+# Запустить конкретный класс тестов
+./gradlew test --tests "org.antlr.jetbrains.sample.TypeScriptLexerParserTest"
+```
+
+### Очистка
+
+```bash
+# Очистить все сгенерированные файлы и артефакты сборки
+./gradlew clean
+```
+
+### Публикация
+
+```bash
+# Опубликовать в локальный Maven репозиторий
+./gradlew publishToMavenLocal
+
+# Опубликовать в удаленный репозиторий (release версия)
+./gradlew publishAllPublicationsToMavenRepository -Drelease=true
+
+# Опубликовать в удаленный репозиторий (snapshot версия)
+./gradlew publishAllPublicationsToMavenRepository
+```
+
+Для публикации требуются системные свойства:
+
+- `-Dgradle.wrapperUser` — имя пользователя Maven
+- `-Dgradle.wrapperPassword` — пароль Maven  
+- `-Dgradle.wrapperOscToken` — OSC токен для аутентификации
+
+## Структура проекта
+
+```
+angular-js/
+├── src/
+│   ├── main/
+│   │   ├── antlr/                    # ANTLR грамматики
+│   │   │   └── org/antlr/jetbrains/sample/parser/
+│   │   │       ├── TypeScriptLexer.g4      # Лексер
+│   │   │       └── TypeScriptParser.g4     # Парсер
+│   │   ├── gen/                      # Сгенерированные исходники
+│   │   │   ├── TypeScriptLexer.java
+│   │   │   ├── TypeScriptParser.java
+│   │   │   └── ...
+│   │   ├── java/                     # Код плагина
+│   │   │   └── org/antlr/jetbrains/sample/
+│   │   │       ├── parser/           # Генерируемые классы парсера
+│   │   │       ├── psi/              # PSI узлы
+│   │   │       ├── structview/       # Показ структуры
+│   │   │       ├── TypeScriptParserDefinition.java
+│   │   │       ├── TypeScriptSyntaxHighlighter.java
+│   │   │       ├── TypeScriptFileType.java
+│   │   │       ├── AngularHtmlTagReferenceContributor.java
+│   │   │       ├── AngularHtmlTagCompletionContributor.java
+│   │   │       └── ...
+│   │   └── resources/
+│   │       ├── META-INF/
+│   │       │   └── plugin.xml        # Конфигурация плагина
+│   │       └── org/                  # Ресурсы
+│   └── test/
+│       └── java/                     # Тесты
+│           └── org/antlr/jetbrains/sample/
+│               └── TypeScriptLexerParserTest.java
+├── libs/                             # Локальные JAR зависимости
+│   └── antlr4-intellij-adaptor-0.2.0.jar
+├── build.gradle.kts                  # Настройки сборки
+├── settings.gradle.kts               # Настройки проекта
+└── gradle.properties                 # Свойства проекта
+```
+
+## Работа с генераторами ANTLR
+
+Генерация лексера и парсера происходит автоматически перед каждой компиляцией. Генерируемые файлы сохраняются в `src/main/gen/`.
+
+Если нужно обновить генераторы вручную:
+
+```bash
+# Генерировать только ANTLR файлы
+./gradlew generateGrammarSource
+
+# Генерировать только lexer
+./gradlew generateLexer
+
+# Генерировать только parser
+./gradlew generateParser
+```
+
+После изменения `.g4` файлов запустите:
+
+```bash
+./gradlew clean generateGrammarSource compileJava
+```
+
+## Ключевые классы плагина
+
+| Класс | Назначение |
+|-------|-----------|
+| `TypeScriptParserDefinition` | Определяет парсер, лексер и типы PSI элементов |
+| `TypeScriptSyntaxHighlighter` | Подсветка синтаксиса TypeScript |
+| `TypeScriptFileTypeFactory` | Регистрация расширения `.ts` |
+| `TypeScriptExternalAnnotator` | Внешняя проверка ошибок |
+| `TypeScriptDecoratorAnnotator` | Подсветка декораторов `@Component` и т.д. |
+| `AngularHtmlTagReferenceContributor` | Разрешение ссылок в Angular HTML |
+| `AngularHtmlTagCompletionContributor` | Автодополнение Angular тегов |
+| `AngularHtmlGotoDeclarationHandler` | Переход к объявлению |
+
+## Отладка
+
+Плагин запускается в изолированной IDE при выполнении `./gradlew runIde`. Все изменения в коде применяются при перезапуске плагина в окне отладки.
+
+## Известные проблемы
+
+- **macOS Dragon Speech Recognition:** Включение Dragon speech recognition вызывает GUI deadlocks при переименовании. Решение: отключить Dragon.
+
+## Ссылки
+
+- [ANTLR IntelliJ Adaptor](https://github.com/antlr/antlr4-intellij-adaptor/)
+- [Gradle IntelliJ Plugin](https://github.com/JetBrains/gradle-intellij-plugin)
+- [JetBrains Plugins Repository](https://plugins.jetbrains.com/)
+- [ANTLR 4 Documentation](https://antlr.org/)
