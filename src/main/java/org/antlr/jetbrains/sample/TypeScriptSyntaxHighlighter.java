@@ -34,7 +34,7 @@ public class TypeScriptSyntaxHighlighter extends SyntaxHighlighterBase {
 
     static {
         PSIElementTypeFactory.defineLanguageIElementTypes(TypeScriptLanguage.INSTANCE,
-            TypeScriptParser.tokenNames,
+            TypeScriptParser.VOCABULARY,
             TypeScriptParser.ruleNames);
     }
 

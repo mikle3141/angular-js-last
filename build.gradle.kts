@@ -133,7 +133,8 @@ dependencies {
     antlr("org.antlr:antlr4:$antlr4Version") {
         exclude(group = "com.ibm.icu", module = "icu4j")
     }
-    implementation("org.antlr:antlr4-intellij-adaptor:0.1")
+//    implementation("org.antlr:antlr4-intellij-adaptor:0.1")
+    implementation(files("libs/antlr4-intellij-adaptor-0.2.0.jar"))
     testImplementation("junit:junit:4.13.2")
 }
 

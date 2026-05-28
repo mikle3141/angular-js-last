@@ -34,7 +34,7 @@ public class TypeScriptParserDefinition implements ParserDefinition {
 
     static {
         PSIElementTypeFactory.defineLanguageIElementTypes(TypeScriptLanguage.INSTANCE,
-            TypeScriptParser.tokenNames,
+            TypeScriptParser.VOCABULARY,
             TypeScriptParser.ruleNames);
         List<TokenIElementType> tokenIElementTypes =
             PSIElementTypeFactory.getTokenIElementTypes(TypeScriptLanguage.INSTANCE);

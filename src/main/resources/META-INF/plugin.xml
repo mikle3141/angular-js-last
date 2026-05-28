@@ -15,6 +15,7 @@
 	<idea-version since-build="251"/>
 
 	<depends>com.intellij.modules.lang</depends>
+	<depends>com.intellij.modules.xml</depends>
 
     <incompatible-with>com.gigaide.javascript</incompatible-with>
 
