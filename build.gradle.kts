@@ -138,6 +138,14 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/gen")
+        }
+    }
+}
+
 intellijPlatform {
     pluginConfiguration {
         id = properties("pluginId")
@@ -156,6 +164,11 @@ tasks.named("verifyPluginProjectConfiguration") {
 
 tasks.named<org.gradle.api.plugins.antlr.AntlrTask>("generateGrammarSource") {
     arguments = arguments + listOf("-package", "org.antlr.jetbrains.sample.parser", "-Xexact-output-dir")
+    outputDirectory = file("src/main/gen")
+}
+
+tasks.named<JavaCompile>("compileJava") {
+    dependsOn("generateGrammarSource")
 }
 
 publishing {
