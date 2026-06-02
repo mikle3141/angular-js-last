@@ -36,7 +36,7 @@ public class AngularHtmlTagCompletionContributor extends CompletionContributor {
                         return;
                     }
                     CompletionResultSet prefixed = result.withPrefixMatcher(tagCtx.prefix);
-                    List<String> selectors = AngularHtmlTagReferenceContributor.getAllSelectors(file.getProject());
+                    List<String> selectors = AngularSelectorIndex.getAllSelectors(file.getProject());
                     for (String selector : selectors) {
                         prefixed.addElement(
                                 LookupElementBuilder.create(selector)
