@@ -31,18 +31,33 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+/**
+ * Определение парсера TypeScript для платформы IntelliJ.
+ * <p>
+ * Связывает сгенерированные ANTLR-лексер и парсер с PSI-деревом:
+ * лексер, парсер, типы токенов/правил и фабрика PSI-узлов.
+ * Листовые узлы (идентификаторы) создаются в {@link TypeScriptASTFactory},
+ * составные — в {@link #createElement(ASTNode)}.
+ */
 public class TypeScriptParserDefinition implements ParserDefinition {
+
+    /** Тип корневого узла файла. */
     public static final IFileElementType FILE =
         new IFileElementType(TypeScriptLanguage.INSTANCE);
 
+    /** Тип токена идентификатора (используется при переименовании и т.п.). */
     public static TokenIElementType ID;
-    /** Direct child rule of {@code functionDeclaration} that holds the function name. */
+
+    /** Прямой дочерний узел {@code functionDeclaration}, содержащий имя функции. */
     public static RuleIElementType IDENTIFIER;
-    /** Direct child rule of {@code variableDeclaration} that holds the variable name. */
+
+    /** Прямой дочерний узел {@code variableDeclaration}, содержащий имя переменной. */
     public static RuleIElementType IDENTIFIER_OR_KEYWORD;
-    /** Direct child rule of {@code formalParameterArg} that holds the parameter name. */
+
+    /** Прямой дочерний узел {@code formalParameterArg}, содержащий имя параметра. */
     public static RuleIElementType ASSIGNABLE;
 
+    /** Регистрация типов токенов и правил грамматики для языка ANTLRTypeScript. */
     static {
         PSIElementTypeFactory.defineLanguageIElementTypes(TypeScriptLanguage.INSTANCE,
             TypeScriptParser.tokenNames,
@@ -57,18 +72,21 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         ASSIGNABLE = ruleIElementTypes.get(TypeScriptParser.RULE_assignable);
     }
 
+    /** Многострочные и однострочные комментарии — пропускаются при построении PSI. */
     public static final TokenSet COMMENTS =
         PSIElementTypeFactory.createTokenSet(
             TypeScriptLanguage.INSTANCE,
             TypeScriptLexer.MultiLineComment,
             TypeScriptLexer.SingleLineComment);
 
+    /** Пробелы и переводы строк — пропускаются при построении PSI. */
     public static final TokenSet WHITESPACE =
         PSIElementTypeFactory.createTokenSet(
             TypeScriptLanguage.INSTANCE,
             TypeScriptLexer.WhiteSpaces,
             TypeScriptLexer.LineTerminator);
 
+    /** Строковые литералы (для подсветки и навигации по строкам). */
     public static final TokenSet STRING =
         PSIElementTypeFactory.createTokenSet(
             TypeScriptLanguage.INSTANCE,
@@ -88,6 +106,7 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         return new ANTLRParserAdaptor(TypeScriptLanguage.INSTANCE, parser) {
             @Override
             protected ParseTree parse(Parser parser, IElementType root) {
+                // Для файла — правило program; для переименования отдельного ID — identifier.
                 if (root instanceof IFileElementType) {
                     return ((TypeScriptParser) parser).program();
                 }
@@ -129,6 +148,13 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         return new TypeScriptPSIFileRoot(viewProvider);
     }
 
+    /**
+     * Преобразует внутренний AST-узел в PSI-элемент.
+     * <p>
+     * Для ключевых правил грамматики создаются специализированные поддеревья,
+     * необходимые для навигации, поиска использований и переименования.
+     * Листья-идентификаторы создаются в {@link TypeScriptASTFactory}.
+     */
     @NotNull
     @Override
     public PsiElement createElement(ASTNode node) {
@@ -141,14 +167,19 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         }
         switch (((RuleIElementType) elType).getRuleIndex()) {
             case TypeScriptParser.RULE_functionDeclaration:
+                // Определение функции: PsiNameIdentifierOwner + область видимости параметров.
                 return new FunctionSubtree(node, IDENTIFIER);
             case TypeScriptParser.RULE_variableDeclaration:
+                // Объявление переменной (var/let/const).
                 return new VardefSubtree(node, IDENTIFIER_OR_KEYWORD);
             case TypeScriptParser.RULE_formalParameterArg:
+                // Параметр функции.
                 return new ArgdefSubtree(node, ASSIGNABLE);
             case TypeScriptParser.RULE_block:
+                // Блок { ... }: область видимости локальных переменных.
                 return new BlockSubtree(node);
             case TypeScriptParser.RULE_arguments:
+                // Вызов функции: foo(...).
                 return new CallSubtree(node);
             default:
                 return new ANTLRPsiNode(node);
