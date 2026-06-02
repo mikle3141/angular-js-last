@@ -19,7 +19,12 @@ import org.antlr.intellij.adaptor.parser.ANTLRParserAdaptor;
 import org.antlr.intellij.adaptor.psi.ANTLRPsiNode;
 import org.antlr.jetbrains.sample.parser.TypeScriptLexer;
 import org.antlr.jetbrains.sample.parser.TypeScriptParser;
+import org.antlr.jetbrains.sample.psi.ArgdefSubtree;
+import org.antlr.jetbrains.sample.psi.BlockSubtree;
+import org.antlr.jetbrains.sample.psi.CallSubtree;
+import org.antlr.jetbrains.sample.psi.FunctionSubtree;
 import org.antlr.jetbrains.sample.psi.TypeScriptPSIFileRoot;
+import org.antlr.jetbrains.sample.psi.VardefSubtree;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.jetbrains.annotations.NotNull;
@@ -31,6 +36,12 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         new IFileElementType(TypeScriptLanguage.INSTANCE);
 
     public static TokenIElementType ID;
+    /** Direct child rule of {@code functionDeclaration} that holds the function name. */
+    public static RuleIElementType IDENTIFIER;
+    /** Direct child rule of {@code variableDeclaration} that holds the variable name. */
+    public static RuleIElementType IDENTIFIER_OR_KEYWORD;
+    /** Direct child rule of {@code formalParameterArg} that holds the parameter name. */
+    public static RuleIElementType ASSIGNABLE;
 
     static {
         PSIElementTypeFactory.defineLanguageIElementTypes(TypeScriptLanguage.INSTANCE,
@@ -39,6 +50,11 @@ public class TypeScriptParserDefinition implements ParserDefinition {
         List<TokenIElementType> tokenIElementTypes =
             PSIElementTypeFactory.getTokenIElementTypes(TypeScriptLanguage.INSTANCE);
         ID = tokenIElementTypes.get(TypeScriptLexer.Identifier);
+        List<RuleIElementType> ruleIElementTypes =
+            PSIElementTypeFactory.getRuleIElementTypes(TypeScriptLanguage.INSTANCE);
+        IDENTIFIER = ruleIElementTypes.get(TypeScriptParser.RULE_identifier);
+        IDENTIFIER_OR_KEYWORD = ruleIElementTypes.get(TypeScriptParser.RULE_identifierOrKeyWord);
+        ASSIGNABLE = ruleIElementTypes.get(TypeScriptParser.RULE_assignable);
     }
 
     public static final TokenSet COMMENTS =
@@ -116,6 +132,26 @@ public class TypeScriptParserDefinition implements ParserDefinition {
     @NotNull
     @Override
     public PsiElement createElement(ASTNode node) {
-        return new ANTLRPsiNode(node);
+        IElementType elType = node.getElementType();
+        if (elType instanceof TokenIElementType) {
+            return new ANTLRPsiNode(node);
+        }
+        if (!(elType instanceof RuleIElementType)) {
+            return new ANTLRPsiNode(node);
+        }
+        switch (((RuleIElementType) elType).getRuleIndex()) {
+            case TypeScriptParser.RULE_functionDeclaration:
+                return new FunctionSubtree(node, IDENTIFIER);
+            case TypeScriptParser.RULE_variableDeclaration:
+                return new VardefSubtree(node, IDENTIFIER_OR_KEYWORD);
+            case TypeScriptParser.RULE_formalParameterArg:
+                return new ArgdefSubtree(node, ASSIGNABLE);
+            case TypeScriptParser.RULE_block:
+                return new BlockSubtree(node);
+            case TypeScriptParser.RULE_arguments:
+                return new CallSubtree(node);
+            default:
+                return new ANTLRPsiNode(node);
+        }
     }
 }
