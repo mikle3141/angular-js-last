@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
     id("org.jetbrains.intellij.platform") version "2.6.0"
     java
@@ -39,6 +41,7 @@ repositories {
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("ideaVersion"), useInstaller = false)
+        testFramework(TestFrameworkType.Platform)
     }
     antlr("org.antlr:antlr4:$antlr4Version") {
         exclude(group = "com.ibm.icu", module = "icu4j")
