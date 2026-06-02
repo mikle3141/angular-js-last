@@ -26,21 +26,37 @@ import java.util.stream.Collectors;
 
 /**
  * Единый кэшируемый индекс Angular selector'ов по всем {@code .ts} файлам проекта.
- * Используется для навигации, references и автодополнения в HTML-шаблонах.
+ * <p>
+ * Индекс строится один раз на «поколение» PSI ({@link PsiModificationTracker}) и
+ * переиспользуется в {@link AngularHtmlTagReferenceContributor},
+ * {@link AngularHtmlGotoDeclarationHandler} и {@link AngularHtmlTagCompletionContributor}.
+ * <p>
+ * Поиск selector'ов выполняется по тексту файла (regex {@code selector: '...'}),
+ * с пропуском совпадений внутри комментариев.
  */
 public final class AngularSelectorIndex {
     private static final Logger LOG = Logger.getInstance(AngularSelectorIndex.class);
+
+    /** Шаблон {@code selector: 'my-component'} в декораторе {@code @Component}. */
     private static final Pattern SELECTOR_PATTERN = Pattern.compile("selector\\s*:\\s*(['\"`])([^'\"]+)\\1");
+
+    /** Ключ кэша индекса в {@link Project#getUserData(Key)}. */
     private static final Key<SelectorIndexCache> SELECTOR_INDEX_KEY = Key.create("angular.selector.index");
 
     private AngularSelectorIndex() {
     }
 
+    /** Возвращает отсортированный список всех selector'ов проекта (для автодополнения). */
     @NotNull
     public static List<String> getAllSelectors(@NotNull Project project) {
         return getOrBuildIndex(project).allSelectors();
     }
 
+    /**
+     * Находит PSI-элемент строкового литерала selector'а в {@code .ts} файле.
+     *
+     * @return лист PSI в позиции значения selector'а или {@code null}, если не найден
+     */
     @Nullable
     public static PsiElement resolveSelector(@NotNull Project project, @NotNull String selector) {
         SelectorIndex index = getOrBuildIndex(project);
@@ -54,7 +70,8 @@ public final class AngularSelectorIndex {
     }
 
     /**
-     * Проверяет, попадает ли диапазон {@code [start, end)} внутрь комментария или строкового литерала.
+     * Проверяет, попадает ли диапазон {@code [start, end)} внутрь комментария.
+     * Строковые литералы пропускаются при сканировании, но сами не считаются комментариями.
      */
     static boolean isInsideComment(@NotNull String text, int start, int end) {
         int i = 0;
@@ -86,6 +103,7 @@ public final class AngularSelectorIndex {
                 }
                 continue;
             }
+            // Пропускаем строковые литералы, чтобы не спутать их с комментариями.
             if (text.charAt(i) == '`' || text.charAt(i) == '\'' || text.charAt(i) == '"') {
                 char quote = text.charAt(i);
                 i++;
@@ -107,6 +125,7 @@ public final class AngularSelectorIndex {
         return false;
     }
 
+    /** Возвращает кэшированный индекс или перестраивает его при изменении PSI. */
     private static @NotNull SelectorIndex getOrBuildIndex(@NotNull Project project) {
         long currentModCount = PsiModificationTracker.getInstance(project).getModificationCount();
         SelectorIndexCache cache = project.getUserData(SELECTOR_INDEX_KEY);
@@ -118,6 +137,7 @@ public final class AngularSelectorIndex {
         return rebuilt;
     }
 
+    /** Сканирует все {@code .ts} файлы проекта и собирает карту selector → PSI-указатель. */
     private static @NotNull SelectorIndex buildIndex(@NotNull Project project) {
         Collection<VirtualFile> files = FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project));
         LOG.debug("[AngularSelector] building index from ts files=" + files.size());
@@ -130,6 +150,7 @@ public final class AngularSelectorIndex {
                 continue;
             }
             String text = psi.getText();
+            // Быстрая предфильтрация: файл без @Component и selector не интересен.
             if (!text.contains("selector") || !text.contains("@Component")) {
                 continue;
             }
@@ -139,6 +160,7 @@ public final class AngularSelectorIndex {
         return new SelectorIndex(selectors);
     }
 
+    /** Добавляет selector'ы из одного файла; при дубликатах сохраняется первое вхождение. */
     private static void collectSelectors(@NotNull PsiFile tsFile,
                                          @NotNull String text,
                                          @NotNull Map<String, SmartPsiElementPointer<PsiElement>> target) {
@@ -153,6 +175,7 @@ public final class AngularSelectorIndex {
             }
             PsiElement selectorLeaf = tsFile.findElementAt(matchStart);
             if (selectorLeaf != null) {
+                // SmartPointer переживает перестройку PSI между обращениями к индексу.
                 target.putIfAbsent(
                         selectorValue,
                         SmartPointerManager.getInstance(tsFile.getProject()).createSmartPsiElementPointer(selectorLeaf)
@@ -161,6 +184,7 @@ public final class AngularSelectorIndex {
         }
     }
 
+    /** Неизменяемый снимок индекса: selector → указатель на литерал в исходнике. */
     private static final class SelectorIndex {
         private final Map<String, SmartPsiElementPointer<PsiElement>> selectors;
 
@@ -181,6 +205,7 @@ public final class AngularSelectorIndex {
         }
     }
 
+    /** Связка индекса с номером модификации PSI, при котором он был построен. */
     private static final class SelectorIndexCache {
         private final long modificationCount;
         private final SelectorIndex index;
