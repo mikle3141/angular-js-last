@@ -8,6 +8,7 @@ import com.intellij.psi.PsiReferenceBase;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import org.antlr.intellij.adaptor.psi.ScopeNode;
+import org.antlr.jetbrains.sample.TypeScriptPsiUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,30 +84,11 @@ public abstract class SampleElementRef extends PsiReferenceBase<IdentifierPSINod
 			if (!name.equals(id.getText())) {
 				continue;
 			}
-			if (isInImportStatement(id)) {
+			if (TypeScriptPsiUtil.isInsideImportStatement(id)) {
 				return id;
 			}
 		}
 		return null;
-	}
-
-	private static boolean isInImportStatement(@NotNull PsiElement element) {
-		PsiElement p = element.getParent();
-		while (p != null) {
-			String text = p.getText();
-			if (text != null) {
-				String trimmed = text.trim();
-				if (trimmed.startsWith("import ")
-					|| trimmed.startsWith("import{")
-				    || trimmed.startsWith("import\"")
-				    || trimmed.startsWith("import'")
-				) {
-					return true;
-				}
-			}
-			p = p.getParent();
-		}
-		return false;
 	}
 
 	@Override

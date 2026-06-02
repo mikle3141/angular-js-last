@@ -1,36 +1,27 @@
 package org.antlr.jetbrains.sample.psi;
 
-import com.intellij.lang.ASTNode;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.psi.search.FilenameIndex;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.IncorrectOperationException;
-import org.antlr.intellij.adaptor.lexer.RuleIElementType;
+import org.antlr.jetbrains.sample.TypeScriptPsiUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_classDeclaration;
-import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_exportModuleItems;
-import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_exportStatement;
-import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_functionDeclaration;
-import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_importStatement;
 
 /**
  * Reference for an identifier that appears in an import statement.
  * Resolves to the corresponding export (class of function) in the imported module.
  */
 public class ImportRef extends SampleElementRef {
-    private static final Pattern IMPORT_FROM_PATTERN = Pattern.compile("\\bfrom\\s+['\"]([^'\"]+)['\"]");
 
     public ImportRef(@NotNull IdentifierPSINode element) {
         super(element);
@@ -38,9 +29,8 @@ public class ImportRef extends SampleElementRef {
 
     @Override
     public boolean isDefSubtree(PsiElement def) {
-        // Accept identifier nodes that are the exported name (under classDeclaration or functionDeclaration or in export list)
         if (def instanceof IdentifierPSINode) {
-            return isExportedIdentifier((IdentifierPSINode) def);
+            return TypeScriptPsiUtil.isExportedIdentifier((IdentifierPSINode) def);
         }
         return false;
     }
@@ -48,18 +38,13 @@ public class ImportRef extends SampleElementRef {
     @Nullable
     @Override
     public PsiElement resolve() {
-        PsiElement importStatement = findImportStatementAncestor(myElement);
+        PsiElement importStatement = TypeScriptPsiUtil.findImportStatementAncestor(myElement);
         if (importStatement == null) {
             return null;
         }
-        String importText = importStatement.getText();
-        Matcher matcher = IMPORT_FROM_PATTERN.matcher(importText);
-        if (!matcher.find()) {
-            return null;
-        }
-        String modulePath = matcher.group(1);
+        String modulePath = TypeScriptPsiUtil.getImportModulePath(importStatement);
         String importedName = myElement.getName();
-        if (importedName == null || importedName.isEmpty()) {
+        if (modulePath == null || importedName == null || importedName.isEmpty()) {
             return null;
         }
 
@@ -73,7 +58,7 @@ public class ImportRef extends SampleElementRef {
             return null;
         }
 
-        VirtualFile targetFile = resolveRelativeModule(baseDir, modulePath);
+        VirtualFile targetFile = resolveRelativeModule(myElement.getProject(), baseDir, modulePath);
         if (targetFile == null) {
             return null;
         }
@@ -83,7 +68,7 @@ public class ImportRef extends SampleElementRef {
             return null;
         }
 
-        return findExportedName((TypeScriptPSIFileRoot) targetPsi, importedName);
+        return TypeScriptPsiUtil.findExportedIdentifier((TypeScriptPSIFileRoot) targetPsi, importedName);
     }
 
     @Override
@@ -104,32 +89,19 @@ public class ImportRef extends SampleElementRef {
     }
 
     @Nullable
-    private static PsiElement findImportStatementAncestor(@NotNull PsiElement element) {
-        PsiElement p = element.getParent();
-        while (p != null) {
-            ASTNode node = p.getNode();
-            if (node != null) {
-                IElementType type = node.getElementType();
-                if (type instanceof RuleIElementType) {
-                    if (((RuleIElementType) type).getRuleIndex() == RULE_importStatement) {
-                        return p;
-                    }
-                }
-            }
-            p = p.getParent();
+    private static VirtualFile resolveRelativeModule(@NotNull Project project,
+                                                       @NotNull VirtualFile baseDir,
+                                                       @NotNull String modulePath) {
+        VirtualFile relative = resolveRelativeToDirectory(baseDir, modulePath);
+        if (relative != null) {
+            return relative;
         }
-        return null;
-    }
 
-    @Nullable
-    private static VirtualFile resolveRelativeModule(@NotNull VirtualFile baseDir, @NotNull String modulePath) {
         Path basePath = Paths.get(baseDir.getPath());
         Path resolved = basePath.resolve(modulePath).normalize();
-        // Use forward slashes so LocalFileSystem.findFileSystem.findFileByPath works on all platforms
         String pathStr = resolved.toString().replace('\\', '/');
 
         LocalFileSystem fs = LocalFileSystem.getInstance();
-        // If path already has .ts/.tsx, try as-is first
         VirtualFile vf = fs.findFileByPath(pathStr);
         if (vf != null && !vf.isDirectory()) {
             return vf;
@@ -155,81 +127,70 @@ public class ImportRef extends SampleElementRef {
                 return index;
             }
         }
-        // Fallback: resolve via NIO path (e.g. when path has backslashes or different VFS)
         VirtualFile byNio = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(resolved);
         if (byNio != null && !byNio.isDirectory()) {
             return byNio;
+        }
+        return findModuleInProject(project, modulePath);
+    }
+
+    @Nullable
+    private static VirtualFile resolveRelativeToDirectory(@NotNull VirtualFile baseDir, @NotNull String modulePath) {
+        String rel = modulePath;
+        if (rel.startsWith("./")) {
+            rel = rel.substring(2);
+        }
+        else if (rel.startsWith("../")) {
+            VirtualFile parent = baseDir.getParent();
+            if (parent == null) {
+                return null;
+            }
+            return resolveRelativeToDirectory(parent, "./" + rel.substring(3));
+        }
+        if (rel.isEmpty()) {
+            return null;
+        }
+        if (rel.endsWith(".ts") || rel.endsWith(".tsx")) {
+            VirtualFile file = baseDir.findChild(rel);
+            return file != null && !file.isDirectory() ? file : null;
+        }
+        VirtualFile file = baseDir.findChild(rel + ".ts");
+        if (file != null && !file.isDirectory()) {
+            return file;
+        }
+        file = baseDir.findChild(rel + ".tsx");
+        if (file != null && !file.isDirectory()) {
+            return file;
+        }
+        VirtualFile dir = baseDir.findChild(rel);
+        if (dir != null && dir.isDirectory()) {
+            VirtualFile index = dir.findChild("index.ts");
+            if (index != null) {
+                return index;
+            }
+            index = dir.findChild("index.tsx");
+            if (index != null) {
+                return index;
+            }
         }
         return null;
     }
 
     @Nullable
-    private static PsiElement findExportedName(@NotNull TypeScriptPSIFileRoot file, @NotNull String name) {
-        for (IdentifierPSINode id : PsiTreeUtil.findChildrenOfType(file, IdentifierPSINode.class)) {
-            if (!name.equals(id.getText())) {
-                continue;
-            }
-            if (isExportedIdentifier(id)) {
-                return id;
+    private static VirtualFile findModuleInProject(@NotNull Project project, @NotNull String modulePath) {
+        String normalized = modulePath;
+        if (normalized.startsWith("./")) {
+            normalized = normalized.substring(2);
+        }
+        if (!normalized.endsWith(".ts") && !normalized.endsWith(".tsx")) {
+            normalized = normalized + ".ts";
+        }
+        String expectedName = Paths.get(normalized).getFileName().toString();
+        for (VirtualFile candidate : FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project))) {
+            if (expectedName.equals(candidate.getName())) {
+                return candidate;
             }
         }
         return null;
-    }
-
-    private static boolean isExportedIdentifier(@NotNull IdentifierPSINode id) {
-        boolean underExport = false;
-        PsiElement walk = id.getParent();
-        while (walk != null) {
-            ASTNode node = walk.getNode();
-            if (node != null && node.getElementType() instanceof RuleIElementType) {
-                int rule = ((RuleIElementType) node.getElementType()).getRuleIndex();
-                if (rule == RULE_exportStatement) {
-                    underExport = true;
-                    break;
-                }
-            }
-            walk = walk.getParent();
-        }
-        if (!underExport) {
-            return false;
-        }
-        // Walk up: exported name can be under classDeclaration, functionDeclaration, or exportModuleItems
-        // (identifier token's parent is often RULE_identifier, not classDeclaration directly)
-        walk = id.getParent();
-        while (walk != null) {
-            ASTNode node = walk.getNode();
-            if (node != null && node.getElementType() instanceof RuleIElementType) {
-                int rule = ((RuleIElementType) node .getElementType()).getRuleIndex();
-                if (rule == RULE_classDeclaration || rule == RULE_functionDeclaration) {
-                    return true;
-                }
-                if (rule == RULE_exportModuleItems) {
-                    return true;
-                }
-                if (rule == RULE_exportStatement) {
-                    return true;
-                }
-            }
-            walk = walk.getParent();
-        }
-        return false;
-    }
-
-    private static boolean isInExportModuleItems(PsiElement element) {
-        PsiElement walk = element;
-        while (walk != null) {
-            ASTNode node = walk.getNode();
-            if (node != null && node.getElementType() instanceof RuleIElementType) {
-                int rule = ((RuleIElementType) node.getElementType()).getRuleIndex();
-                if (rule == RULE_exportModuleItems) {
-                    return true;
-                }
-                if (rule == RULE_exportStatement) {
-                    return false;
-                }
-            }
-            walk = walk.getParent();
-        }
-        return false;
     }
 }

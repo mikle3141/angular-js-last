@@ -63,7 +63,52 @@ public class TypeScriptLexerParserTest {
     }
 
     @Test
-    public void testImportStatement() {
+    public void testAngularComponentParseTree() {
+        String code = """
+            import { Component } from '@angular/core';
+
+            @Component({
+              selector: 'app-simple',
+              template: '<div>Hello World</div>'
+            })
+            export class SimpleComponent {
+              name = 'Test';
+            }
+            """;
+        TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));
+        TypeScriptParser parser = new TypeScriptParser(new CommonTokenStream(lexer));
+        ParseTree tree = parser.program();
+        String treeStr = tree.toStringTree(parser);
+        assertNotNull(tree);
+        assertTrue("parse tree: " + treeStr, treeStr.contains("decoratorCallExpression"));
+    }
+
+    @Test
+    public void testExportFunctionParseTree() {
+        String code = "export function foo() { return 1; }";
+        TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));
+        TypeScriptParser parser = new TypeScriptParser(new CommonTokenStream(lexer));
+        ParseTree tree = parser.program();
+        String treeStr = tree.toStringTree(parser);
+        assertNotNull(tree);
+        assertTrue("parse tree: " + treeStr, treeStr.contains("sourceElement export"));
+        assertTrue("parse tree: " + treeStr, treeStr.contains("functionDeclaration"));
+    }
+
+    @Test
+    public void testExportClassParseTree() {
+        String code = "export class SimpleComponent { }";
+        TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));
+        TypeScriptParser parser = new TypeScriptParser(new CommonTokenStream(lexer));
+        ParseTree tree = parser.program();
+        String treeStr = tree.toStringTree(parser);
+        assertNotNull(tree);
+        assertTrue("parse tree: " + treeStr, treeStr.contains("sourceElement export"));
+        assertTrue("parse tree: " + treeStr, treeStr.contains("classDeclaration"));
+    }
+
+    @Test
+    public void testImportExportParseTree() {
         String code = "import { foo } from './module';";
         TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));
         TypeScriptParser parser = new TypeScriptParser(new CommonTokenStream(lexer));

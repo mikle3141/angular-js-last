@@ -10,6 +10,7 @@ import org.antlr.intellij.adaptor.psi.ANTLRPsiLeafNode;
 import org.antlr.intellij.adaptor.psi.Trees;
 import org.antlr.jetbrains.sample.TypeScriptLanguage;
 import org.antlr.jetbrains.sample.TypeScriptParserDefinition;
+import org.antlr.jetbrains.sample.TypeScriptPsiUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
@@ -97,17 +98,8 @@ public class IdentifierPSINode extends ANTLRPsiLeafNode implements PsiNamedEleme
 	 */
 	@Override
 	public PsiReference getReference() {
-		// if this identifier is inside an import statement (by text), resolve to the export in the target module.
-		PsiElement p = getParent();
-		while (p != null) {
-			String text = p.getText();
-			if (text != null) {
-				String trimmed = text.trim();
-				if (trimmed.startsWith("import ")) {
-					return new ImportRef(this);
-				}
-			}
-			p = p.getParent();
+		if (TypeScriptPsiUtil.isInsideImportStatement(this)) {
+			return new ImportRef(this);
 		}
 
 		PsiElement parent = getParent();
