@@ -59,5 +59,6 @@
 		<completion.contributor language="any"
 								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
 		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularHtmlGotoDeclarationHandler"/>
+		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularResourceGotoDeclarationHandler"/>
 	</extensions>
 </idea-plugin>

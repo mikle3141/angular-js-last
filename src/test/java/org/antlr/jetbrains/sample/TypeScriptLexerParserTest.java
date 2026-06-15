@@ -84,6 +84,27 @@ public class TypeScriptLexerParserTest {
     }
 
     @Test
+    public void testExternalComponentMetadataParseTree() {
+        String code = """
+            import { Component } from '@angular/core';
+
+            @Component({
+              selector: 'app-external',
+              templateUrl: './external.component.html',
+              styleUrls: ['./external.component.css']
+            })
+            export class ExternalComponent { }
+            """;
+        TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));
+        TypeScriptParser parser = new TypeScriptParser(new CommonTokenStream(lexer));
+        ParseTree tree = parser.program();
+        String treeStr = tree.toStringTree(parser);
+        assertNotNull(tree);
+        assertTrue("parse tree: " + treeStr, treeStr.contains("templateUrl") || treeStr.contains("propertyAssignment"));
+        assertTrue("parse tree: " + treeStr, treeStr.contains("arrayLiteral"));
+    }
+
+    @Test
     public void testExportFunctionParseTree() {
         String code = "export function foo() { return 1; }";
         TypeScriptLexer lexer = new TypeScriptLexer(new ANTLRInputStream(code));

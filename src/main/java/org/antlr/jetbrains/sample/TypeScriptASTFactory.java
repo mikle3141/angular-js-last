@@ -8,6 +8,7 @@ import com.intellij.psi.tree.IElementType;
 import org.antlr.intellij.adaptor.lexer.TokenIElementType;
 import org.antlr.jetbrains.sample.parser.TypeScriptLexer;
 import org.antlr.jetbrains.sample.psi.IdentifierPSINode;
+import org.antlr.jetbrains.sample.psi.TypeScriptStringLiteralPSINode;
 import org.jetbrains.annotations.NotNull;
 
 public class TypeScriptASTFactory extends CoreASTFactory {
@@ -20,9 +21,14 @@ public class TypeScriptASTFactory extends CoreASTFactory {
     @NotNull
     @Override
     public LeafElement createLeaf(@NotNull IElementType type, CharSequence text) {
-        if (type instanceof TokenIElementType &&
-            ((TokenIElementType) type).getANTLRTokenType() == TypeScriptLexer.Identifier) {
-            return new IdentifierPSINode(type, text);
+        if (type instanceof TokenIElementType tokenType) {
+            int antlrType = tokenType.getANTLRTokenType();
+            if (antlrType == TypeScriptLexer.Identifier) {
+                return new IdentifierPSINode(type, text);
+            }
+            if (antlrType == TypeScriptLexer.StringLiteral) {
+                return new TypeScriptStringLiteralPSINode(type, text);
+            }
         }
         return super.createLeaf(type, text);
     }

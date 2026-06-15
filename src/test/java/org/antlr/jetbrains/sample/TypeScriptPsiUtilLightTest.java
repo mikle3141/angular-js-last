@@ -12,6 +12,25 @@ import org.junit.runners.JUnit4;
 public class TypeScriptPsiUtilLightTest extends TypeScriptLightFixtureTestCase {
 
     @Test
+    public void testFindsTemplateUrlAndStyleUrlsLiterals() {
+        myFixture.configureByFile("angular_external.ts");
+
+        final PsiElement[] templateUrl = new PsiElement[1];
+        final int[] styleUrlCount = new int[1];
+        TypeScriptPsiUtil.collectComponentResourceLiterals(myFixture.getFile(), (literal, property) -> {
+            if (TypeScriptPsiUtil.METADATA_TEMPLATE_URL.equals(property)) {
+                templateUrl[0] = literal;
+            }
+            if (TypeScriptPsiUtil.METADATA_STYLE_URLS.equals(property)) {
+                styleUrlCount[0]++;
+            }
+        });
+        assertNotNull(templateUrl[0]);
+        assertEquals("./external.component.html", selectorLiteralValue(templateUrl[0]));
+        assertEquals(2, styleUrlCount[0]);
+    }
+
+    @Test
     public void testFindsComponentDecoratorInPsiTree() {
         myFixture.configureByFile("angular_simple.ts");
         TypeScriptPSIFileRoot file = (TypeScriptPSIFileRoot) myFixture.getFile();

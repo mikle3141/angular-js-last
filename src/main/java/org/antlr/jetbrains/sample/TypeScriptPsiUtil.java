@@ -18,7 +18,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
+import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_arrayLiteral;
 import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_classDeclaration;
 import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_decoratorCallExpression;
 import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_decoratorMemberExpression;
@@ -38,6 +40,10 @@ import static org.antlr.jetbrains.sample.parser.TypeScriptParser.RULE_variableDe
  * Общие PSI-утилиты для TypeScript AST, создаваемого ANTLR-парсером плагина.
  */
 public final class TypeScriptPsiUtil {
+    public static final String METADATA_TEMPLATE_URL = "templateUrl";
+    public static final String METADATA_STYLE_URL = "styleUrl";
+    public static final String METADATA_STYLE_URLS = "styleUrls";
+
     private TypeScriptPsiUtil() {
     }
 
@@ -128,14 +134,134 @@ public final class TypeScriptPsiUtil {
 
     @Nullable
     public static PsiElement findSelectorStringLiteral(@NotNull PsiElement componentDecoratorCall) {
+        return findComponentMetadataStringLiteral(componentDecoratorCall, "selector");
+    }
+
+    /** Строковый литерал {@code templateUrl}, {@code styleUrl} или элемент {@code styleUrls}. */
+    @Nullable
+    public static PsiElement findComponentMetadataStringLiteral(@NotNull PsiElement componentDecoratorCall,
+                                                                @NotNull String propertyName) {
         for (PsiElement assignment : findElementsByRule(componentDecoratorCall, RULE_propertyAssignment)) {
-            if (!"selector".equals(getPropertyAssignmentName(assignment))) {
+            if (!propertyName.equals(getPropertyAssignmentName(assignment))) {
                 continue;
             }
-            PsiElement literal = findSelectorValueLiteral(assignment);
+            if (METADATA_STYLE_URLS.equals(propertyName)) {
+                for (PsiElement arrayLiteral : findElementsByRule(assignment, RULE_arrayLiteral)) {
+                    PsiElement literal = findFirstStringLiteral(arrayLiteral);
+                    if (literal != null) {
+                        return literal;
+                    }
+                }
+                continue;
+            }
+            PsiElement literal = findPropertyAssignmentValueLiteral(assignment);
             if (literal != null) {
                 return literal;
             }
+        }
+        return null;
+    }
+
+    /** Все строковые литералы метаданных {@code templateUrl}/{@code styleUrl}/{@code styleUrls}. */
+    public static void collectComponentResourceLiterals(@NotNull PsiElement componentDecoratorCall,
+                                                        @NotNull Consumer<PsiElement> consumer) {
+        collectComponentMetadataStringLiterals(componentDecoratorCall, METADATA_TEMPLATE_URL, consumer);
+        collectComponentMetadataStringLiterals(componentDecoratorCall, METADATA_STYLE_URL, consumer);
+        collectComponentMetadataStringLiterals(componentDecoratorCall, METADATA_STYLE_URLS, consumer);
+    }
+
+    public static void collectComponentResourceLiterals(@NotNull PsiFile file,
+                                                        @NotNull BiConsumer<PsiElement, String> consumer) {
+        for (PsiElement decoratorCall : findElementsByRule(file, RULE_decoratorCallExpression)) {
+            if (!isComponentDecorator(decoratorCall)) {
+                continue;
+            }
+            collectComponentMetadataStringLiterals(decoratorCall, METADATA_TEMPLATE_URL,
+                    literal -> consumer.accept(literal, METADATA_TEMPLATE_URL));
+            collectComponentMetadataStringLiterals(decoratorCall, METADATA_STYLE_URL,
+                    literal -> consumer.accept(literal, METADATA_STYLE_URL));
+            collectComponentMetadataStringLiterals(decoratorCall, METADATA_STYLE_URLS,
+                    literal -> consumer.accept(literal, METADATA_STYLE_URLS));
+        }
+    }
+
+    public static boolean isComponentResourceUrlLiteral(@NotNull PsiElement element) {
+        return getComponentMetadataPropertyForLiteral(element) != null;
+    }
+
+    @Nullable
+    public static String getComponentMetadataPropertyForLiteral(@NotNull PsiElement literal) {
+        if (!isStringLiteralToken(literal)) {
+            return null;
+        }
+        PsiElement assignment = findEnclosingRule(literal, RULE_propertyAssignment);
+        if (assignment == null || findEnclosingComponentDecorator(literal) == null) {
+            return null;
+        }
+        String name = getPropertyAssignmentName(assignment);
+        if (METADATA_TEMPLATE_URL.equals(name)
+                || METADATA_STYLE_URL.equals(name)
+                || METADATA_STYLE_URLS.equals(name)) {
+            return name;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static PsiElement findEnclosingComponentDecorator(@NotNull PsiElement element) {
+        PsiElement walk = element;
+        while (walk != null) {
+            if (isComponentDecorator(walk)) {
+                return walk;
+            }
+            walk = walk.getParent();
+        }
+        return null;
+    }
+
+    public static boolean isStringLiteral(@NotNull PsiElement element) {
+        return isStringLiteralToken(element);
+    }
+
+    private static void collectComponentMetadataStringLiterals(@NotNull PsiElement componentDecoratorCall,
+                                                               @NotNull String propertyName,
+                                                               @NotNull Consumer<PsiElement> consumer) {
+        for (PsiElement assignment : findElementsByRule(componentDecoratorCall, RULE_propertyAssignment)) {
+            if (!propertyName.equals(getPropertyAssignmentName(assignment))) {
+                continue;
+            }
+            if (METADATA_STYLE_URLS.equals(propertyName)) {
+                for (PsiElement arrayLiteral : findElementsByRule(assignment, RULE_arrayLiteral)) {
+                    collectStringLiterals(arrayLiteral, consumer);
+                }
+            }
+            else {
+                PsiElement literal = findPropertyAssignmentValueLiteral(assignment);
+                if (literal != null) {
+                    consumer.accept(literal);
+                }
+            }
+        }
+    }
+
+    private static void collectStringLiterals(@NotNull PsiElement root, @NotNull Consumer<PsiElement> consumer) {
+        if (isStringLiteralToken(root)) {
+            consumer.accept(root);
+            return;
+        }
+        for (PsiElement child : root.getChildren()) {
+            collectStringLiterals(child, consumer);
+        }
+    }
+
+    @Nullable
+    private static PsiElement findEnclosingRule(@NotNull PsiElement element, int ruleIndex) {
+        PsiElement walk = element;
+        while (walk != null) {
+            if (isRule(walk, ruleIndex)) {
+                return walk;
+            }
+            walk = walk.getParent();
         }
         return null;
     }
@@ -249,7 +375,7 @@ public final class TypeScriptPsiUtil {
     }
 
     @Nullable
-    private static PsiElement findSelectorValueLiteral(@NotNull PsiElement propertyAssignment) {
+    private static PsiElement findPropertyAssignmentValueLiteral(@NotNull PsiElement propertyAssignment) {
         boolean skippedPropertyName = false;
         for (PsiElement child : propertyAssignment.getChildren()) {
             if (!skippedPropertyName && isRule(child, RULE_propertyName)) {
