@@ -11,7 +11,6 @@ import com.intellij.psi.SmartPsiElementPointer;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiModificationTracker;
-import org.antlr.jetbrains.sample.psi.TypeScriptPSIFileRoot;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,22 +55,21 @@ public final class AngularComponentResourceIndex {
 
     private static @NotNull ResourceIndex buildIndex(@NotNull Project project) {
         Collection<VirtualFile> files = FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project));
-        PsiManager psiManager = PsiManager.getInstance(project);
         Map<VirtualFile, List<SmartPsiElementPointer<PsiElement>>> index = new LinkedHashMap<>();
 
         for (VirtualFile vf : files) {
-            PsiFile psi = psiManager.findFile(vf);
-            if (!(psi instanceof TypeScriptPSIFileRoot tsFile)) {
-                continue;
-            }
-            if (!TypeScriptPsiUtil.hasComponentDecorators(tsFile)) {
+            if (!AngularIndexScope.isAngularIndexableFile(project, vf)) {
                 continue;
             }
             VirtualFile baseDir = vf.getParent();
             if (baseDir == null) {
                 continue;
             }
-            TypeScriptPsiUtil.collectComponentResourceLiterals(tsFile, (literal, property) -> {
+            PsiFile antlrView = AngularAntlrParseUtil.antlrViewOfFile(project, vf);
+            if (!TypeScriptPsiUtil.hasComponentDecorators(antlrView)) {
+                continue;
+            }
+            TypeScriptPsiUtil.collectComponentResourceLiterals(antlrView, (literal, property) -> {
                 String path = TypeScriptPsiUtil.unquoteStringLiteral(literal);
                 if (path.isEmpty()) {
                     return;
@@ -80,8 +78,13 @@ public final class AngularComponentResourceIndex {
                 if (target == null) {
                     return;
                 }
+                int offset = literal.getTextRange().getStartOffset();
+                PsiElement realElement = AngularAntlrParseUtil.mapOffsetToRealElement(project, vf, offset);
+                if (realElement == null) {
+                    realElement = literal;
+                }
                 SmartPsiElementPointer<PsiElement> pointer =
-                        SmartPointerManager.getInstance(project).createSmartPsiElementPointer(literal);
+                        SmartPointerManager.getInstance(project).createSmartPsiElementPointer(realElement);
                 index.computeIfAbsent(target, ignored -> new ArrayList<>()).add(pointer);
             });
         }

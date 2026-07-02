@@ -30,6 +30,10 @@ public class AngularResourceGotoDeclarationHandler implements GotoDeclarationHan
         if (virtualFile == null || !isAngularResourceFile(virtualFile.getName())) {
             return null;
         }
+        // На имени Angular-тега работает AngularHtmlGotoDeclarationHandler / PsiReference.
+        if (AngularHtmlNavigationUtil.findComponentTagNameAt(sourceElement, offset, editor) != null) {
+            return null;
+        }
         List<PsiElement> targets = AngularComponentResourceIndex.resolveAllResourceReferences(
                 sourceElement.getProject(), virtualFile);
         return targets.isEmpty() ? null : targets.toArray(PsiElement.EMPTY_ARRAY);

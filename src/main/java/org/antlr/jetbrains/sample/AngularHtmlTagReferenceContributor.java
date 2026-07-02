@@ -1,8 +1,6 @@
 package org.antlr.jetbrains.sample;
 
-import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.patterns.XmlPatterns;
 import com.intellij.psi.*;
@@ -75,14 +73,6 @@ public class AngularHtmlTagReferenceContributor extends PsiReferenceContributor 
         @Override
         public @Nullable PsiElement resolve() {
             return AngularSelectorIndex.resolveSelector(myElement.getProject(), selector);
-        }
-
-        @Override
-        public @NotNull Object @NotNull [] getVariants() {
-            Project project = myElement.getProject();
-            return AngularSelectorIndex.getAllSelectors(project).stream()
-                    .map(LookupElementBuilder::create)
-                    .toArray();
         }
     }
 

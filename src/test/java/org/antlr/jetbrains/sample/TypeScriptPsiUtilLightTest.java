@@ -12,6 +12,20 @@ import org.junit.runners.JUnit4;
 public class TypeScriptPsiUtilLightTest extends TypeScriptLightFixtureTestCase {
 
     @Test
+    public void testCreature3AppTsFindsAppRootSelector() {
+        myFixture.configureByFile("creature3_app.ts");
+        assertTrue(TypeScriptPsiUtil.hasComponentDecorators(myFixture.getFile()));
+
+        final String[] selector = new String[1];
+        TypeScriptPsiUtil.collectComponentSelectors(myFixture.getFile(), (s, literal) -> {
+            if ("app-root".equals(s)) {
+                selector[0] = s;
+            }
+        });
+        assertNotNull("app-root selector should be indexed from creature3 app.ts", selector[0]);
+    }
+
+    @Test
     public void testFindsTemplateUrlAndStyleUrlsLiterals() {
         myFixture.configureByFile("angular_external.ts");
 
