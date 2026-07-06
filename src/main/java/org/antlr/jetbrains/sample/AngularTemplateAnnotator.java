@@ -1,5 +1,6 @@
 package org.antlr.jetbrains.sample;
 
+import com.gigaide.javascript.TsLanguage;
 import com.intellij.lang.annotation.Annotation;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.Annotator;
@@ -30,7 +31,7 @@ public class AngularTemplateAnnotator implements Annotator {
     @Override
     public void annotate(@NotNull PsiElement element, @NotNull AnnotationHolder holder) {
         PsiFile file = element.getContainingFile();
-        if (file == null || !file.getLanguage().is(TypeScriptLanguage.INSTANCE)) {
+        if (file == null || !file.getLanguage().is(TsLanguage.INSTANCE)) {
             return;
         }
         // Чтобы не выполняь работу по сто раз, можно ограничиться корнем
@@ -100,7 +101,7 @@ public class AngularTemplateAnnotator implements Annotator {
             int end = startOffset + m.end();
             TextRange range = new TextRange(start, end);
             Annotation ann = holder.createInfoAnnotation(range, null);
-            ann.setTextAttributes(TypeScriptSyntaxHighlighter.DECORATOR);
+            ann.setTextAttributes(AngularHighlighterKeys.DECORATOR);
         }
     }
 }

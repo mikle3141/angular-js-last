@@ -10,9 +10,10 @@ import java.nio.file.Path;
 
 /**
  * Базовый light-тест с фикстурой PSI и каталогом {@code src/test/testdata}.
+ * Зависимые плагины подключаются через Gradle ({@code bundledPlugins}, {@code localPlugin}).
  */
 @RunWith(JUnit4.class)
-abstract class TypeScriptLightFixtureTestCase extends LightPlatformCodeInsightFixture4TestCase {
+abstract class AngularLightFixtureTestCase extends LightPlatformCodeInsightFixture4TestCase {
 
     @Override
     protected @NotNull String getTestDataPath() {
@@ -21,13 +22,6 @@ abstract class TypeScriptLightFixtureTestCase extends LightPlatformCodeInsightFi
 
     /** Значение строкового литерала selector'а без окружающих кавычек. */
     protected static @NotNull String selectorLiteralValue(@NotNull PsiElement element) {
-        String text = element.getText();
-        if (text.length() >= 2) {
-            char quote = text.charAt(0);
-            if ((quote == '\'' || quote == '"' || quote == '`') && text.charAt(text.length() - 1) == quote) {
-                return text.substring(1, text.length() - 1);
-            }
-        }
-        return text;
+        return AngularPsiUtil.unquoteStringLiteral(element);
     }
 }

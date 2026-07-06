@@ -56,6 +56,7 @@ public final class AngularComponentResourceIndex {
     private static @NotNull ResourceIndex buildIndex(@NotNull Project project) {
         Collection<VirtualFile> files = FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project));
         Map<VirtualFile, List<SmartPsiElementPointer<PsiElement>>> index = new LinkedHashMap<>();
+        PsiManager psiManager = PsiManager.getInstance(project);
 
         for (VirtualFile vf : files) {
             if (!AngularIndexScope.isAngularIndexableFile(project, vf)) {
@@ -65,12 +66,12 @@ public final class AngularComponentResourceIndex {
             if (baseDir == null) {
                 continue;
             }
-            PsiFile antlrView = AngularAntlrParseUtil.antlrViewOfFile(project, vf);
-            if (!TypeScriptPsiUtil.hasComponentDecorators(antlrView)) {
+            PsiFile file = psiManager.findFile(vf);
+            if (file == null || !AngularPsiUtil.hasComponentDecorators(file)) {
                 continue;
             }
-            TypeScriptPsiUtil.collectComponentResourceLiterals(antlrView, (literal, property) -> {
-                String path = TypeScriptPsiUtil.unquoteStringLiteral(literal);
+            AngularPsiUtil.collectComponentResourceLiterals(file, (literal, property) -> {
+                String path = AngularPsiUtil.unquoteStringLiteral(literal);
                 if (path.isEmpty()) {
                     return;
                 }
@@ -78,13 +79,8 @@ public final class AngularComponentResourceIndex {
                 if (target == null) {
                     return;
                 }
-                int offset = literal.getTextRange().getStartOffset();
-                PsiElement realElement = AngularAntlrParseUtil.mapOffsetToRealElement(project, vf, offset);
-                if (realElement == null) {
-                    realElement = literal;
-                }
                 SmartPsiElementPointer<PsiElement> pointer =
-                        SmartPointerManager.getInstance(project).createSmartPsiElementPointer(realElement);
+                        SmartPointerManager.getInstance(project).createSmartPsiElementPointer(literal);
                 index.computeIfAbsent(target, ignored -> new ArrayList<>()).add(pointer);
             });
         }

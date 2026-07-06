@@ -1,55 +1,32 @@
-# Sample IntelliJ plugin using ANTLR grammar
+# Angular JS IntelliJ Plugin
 
-This is a demonstration of [ANTLRv4 library for IntelliJ plugins](https://github.com/antlr/antlr4-intellij-adaptor/), 
-which makes it easy to create plugins for IntelliJ-based IDEs based on an ANTLRv4 grammar.
+Angular navigation and metadata support for TypeScript projects. The plugin depends on
+GigaIDE JS/TS (`com.gigaide.javascript`) for TypeScript PSI and adds:
 
-<img src=screenshot.png>
+- HTML tag → `@Component({ selector })` navigation, completion, and go-to-declaration
+- Reverse navigation from HTML/CSS/SCSS resources to `templateUrl` / `styleUrls` in `.ts`
+- Highlighting for `@Component` decorators and Angular control-flow syntax in template literals
+- References from `templateUrl` / `styleUrl` / `styleUrls` string literals to resource files
 
-## Running the plugin for the first time
+## Prerequisites
 
-Make sure the Gradle plugin is installed in your IDE, go to `File -> Open`, select the `build.gradle` file
-and choose `Open as Project`. 
+- IntelliJ IDEA Community 2025.1.3+ (see `gradle.properties`)
+- Built `com.gigaide.javascript` plugin ZIP (see `jsdecorPluginZip` in `gradle.properties`)
+- `com.gigaide.pro` JAR (see `gigaideProJar` in `gradle.properties`)
 
-If you already imported the project when it was not based on Gradle, then choose the option to delete the existing 
-project and reimport it.
+## Build and run
 
-Once the IDE is done downloading dependencies and refreshing the project, you can use the `Gradle` tool window
-and use the following `Tasks`:
-* `build > assemble` to build the project
-* `intellij > runIde` to run the plugin in a sandboxed instance
+```bash
+./gradlew buildPlugin
+./gradlew runIde
+./gradlew test
+```
 
-## Noteworthy things
+## Project layout
 
-### Gradle build
-The build is based on Gradle, and uses the [gradle-intellij-plugin](https://github.com/JetBrains/gradle-intellij-plugin),
-which makes it easy to:
-
-* pull dependencies, especially the IntelliJ SDK and `antlr4-intellij-adaptor`
-* build and run tests in a CI environment on different versions of the SDK
-* generate lexers & parsers from your grammars, thanks to the [ANTLR plugin for Gradle](https://docs.gradle.org/current/userguide/antlr_plugin.html)
-* publish plugins to the [JetBrains Plugins Repository](https://plugins.jetbrains.com/)
-* configure the project for occasional contributors 🙂
-
-### ANTLRPsiNode
-
-PSI nodes defined in the plugin extend `ANTLRPsiNode` and `IdentifierDefSubtree`, which automatically
-makes them `PsiNameIdentifierOwner`s.
-
-### Error highlighting
-
-Errors are shown by `SampleExternalAnnotator`, which makes use of `org.antlr.intellij.adaptor.xpath.XPath` to
-detect references to unknown functions.
-
-### ParserDefinition
-
-`SampleParserDefinition` uses several handy classes from the adaptor library:
-
-* `PSIElementTypeFactory` to generate `IElementType`s from tokens and rules defined in your ANTLRv4 grammar
-* `ANTLRLexerAdaptor` to bind generated lexers to a `com.intellij.lexer.Lexer`
-* `ANTLRParserAdaptor` to bind generated parsers to a `com.intellij.lang.PsiParser`
-
-## Misc
-
-**WARNING**. Turn on Dragon speech recognition for Mac and do a rename.
-GUI deadlocks.  Every time. Turn off dragon. No problem ever.
-See [JetBrains forum](https://devnet.jetbrains.com/message/5566967#5566967).
+| Path | Role |
+|------|------|
+| `src/main/java/.../AngularPsiUtil.java` | Walks jsdecor PSI for `@Component` metadata |
+| `src/main/java/.../AngularSelectorIndex.java` | Project-wide selector index |
+| `src/main/java/.../AngularHtml*.java` | HTML/XML cross-language navigation |
+| `src/test/testdata/` | Light test fixtures |

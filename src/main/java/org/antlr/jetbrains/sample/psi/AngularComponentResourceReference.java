@@ -7,7 +7,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.PsiReferenceBase;
 import org.antlr.jetbrains.sample.AngularResourcePathResolver;
-import org.antlr.jetbrains.sample.TypeScriptPsiUtil;
+import org.antlr.jetbrains.sample.AngularPsiUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,7 +31,7 @@ public class AngularComponentResourceReference extends PsiReferenceBase<PsiEleme
 
     @Override
     public @Nullable PsiElement resolve() {
-        String path = TypeScriptPsiUtil.unquoteStringLiteral(myElement);
+        String path = AngularPsiUtil.unquoteStringLiteral(myElement);
         if (path.isEmpty()) {
             return null;
         }

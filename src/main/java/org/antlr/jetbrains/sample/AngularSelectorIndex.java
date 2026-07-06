@@ -24,12 +24,6 @@ import java.util.stream.Collectors;
 
 /**
  * Единый кэшируемый индекс Angular selector'ов по всем {@code .ts} файлам проекта.
- * <p>
- * Индекс строится один раз на «поколение» PSI ({@link PsiModificationTracker}) и
- * переиспользуется в {@link AngularHtmlTagReferenceContributor},
- * {@link AngularHtmlGotoDeclarationHandler} и {@link AngularHtmlTagCompletionContributor}.
- * <p>
- * Selector'ы ищутся через PSI/XPath в декораторах {@code @Component}, без regex по тексту файла.
  */
 public final class AngularSelectorIndex {
     private static final Logger LOG = Logger.getInstance(AngularSelectorIndex.class);
@@ -71,35 +65,28 @@ public final class AngularSelectorIndex {
         LOG.debug("[AngularSelector] building index from ts files=" + files.size());
         Map<String, SmartPsiElementPointer<PsiElement>> selectors = new LinkedHashMap<>();
 
+        PsiManager psiManager = PsiManager.getInstance(project);
         for (VirtualFile vf : files) {
             if (!AngularIndexScope.isAngularIndexableFile(project, vf)) {
                 continue;
             }
-            PsiFile antlrView = AngularAntlrParseUtil.antlrViewOfFile(project, vf);
-            if (!TypeScriptPsiUtil.hasComponentDecorators(antlrView)) {
+            PsiFile file = psiManager.findFile(vf);
+            if (file == null || !AngularPsiUtil.hasComponentDecorators(file)) {
                 continue;
             }
-            collectSelectors(project, vf, antlrView, selectors);
+            collectSelectors(project, file, selectors);
         }
         LOG.debug("[AngularSelector] index built size=" + selectors.size());
         return new SelectorIndex(selectors);
     }
 
     private static void collectSelectors(@NotNull Project project,
-                                         @NotNull VirtualFile file,
-                                         @NotNull PsiFile antlrView,
+                                         @NotNull PsiFile file,
                                          @NotNull Map<String, SmartPsiElementPointer<PsiElement>> target) {
-        TypeScriptPsiUtil.collectComponentSelectors(antlrView, (selector, literal) -> {
-            int offset = literal.getTextRange().getStartOffset();
-            PsiElement realElement = AngularAntlrParseUtil.mapOffsetToRealElement(project, file, offset);
-            if (realElement == null) {
-                realElement = literal;
-            }
-            target.putIfAbsent(
-                    selector,
-                    SmartPointerManager.getInstance(project).createSmartPsiElementPointer(realElement)
-            );
-        });
+        AngularPsiUtil.collectComponentSelectors(file, (selector, literal) -> target.putIfAbsent(
+                selector,
+                SmartPointerManager.getInstance(project).createSmartPsiElementPointer(literal)
+        ));
     }
 
     private static final class SelectorIndex {

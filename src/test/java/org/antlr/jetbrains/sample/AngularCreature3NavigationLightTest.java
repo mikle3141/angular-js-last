@@ -8,7 +8,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class AngularCreature3NavigationLightTest extends TypeScriptLightFixtureTestCase {
+public class AngularCreature3NavigationLightTest extends AngularLightFixtureTestCase {
 
     @Test
     public void testIndexHtmlNavigatesToAppRootSelector() {

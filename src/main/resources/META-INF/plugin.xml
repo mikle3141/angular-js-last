@@ -1,11 +1,11 @@
 <idea-plugin version="2">
 	<id>com.gigaide.angular.ts</id>
-	<name>Angular ANTLR TypeScript</name>
+	<name>Angular JS</name>
 	<version>0.1</version>
 	<vendor email="gigaide@sberbank.ru" url="https://gigaide.ru">GIGAIDE</vendor>
 
 	<description><![CDATA[
-  <p>TypeScript language support via ANTLR grammar. Files with .ts extension.</p>
+  <p>Angular navigation and metadata support for TypeScript projects using GigaIDE JS/TS PSI.</p>
   ]]></description>
 
 	<change-notes><![CDATA[
@@ -15,8 +15,8 @@
 	<idea-version since-build="251"/>
 
 	<depends>com.intellij.modules.lang</depends>
-
-    <incompatible-with>com.gigaide.javascript</incompatible-with>
+	<depends>com.gigaide.javascript</depends>
+	<depends>com.gigaide.pro</depends>
 
 	<application-components>
 	</application-components>
@@ -31,31 +31,16 @@
 	</actions>
 
 	<extensions defaultExtensionNs="com.intellij">
-		<fileTypeFactory implementation="org.antlr.jetbrains.sample.TypeScriptFileTypeFactory"/>
-		<lang.syntaxHighlighterFactory language="ANTLRTypeScript"
-									   implementationClass="org.antlr.jetbrains.sample.TypeScriptSyntaxHighlighterFactory"/>
+		<annotator language="TypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptDecoratorAnnotator"/>
+		<annotator language="TypeScript" implementationClass="org.antlr.jetbrains.sample.AngularTemplateAnnotator"/>
 
-		<lang.parserDefinition language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptParserDefinition"/>
-		<lang.ast.factory language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptASTFactory"/>
+		<psi.referenceContributor language="TypeScript"
+								  implementation="org.antlr.jetbrains.sample.AngularComponentResourceReferenceContributor"/>
 
-		<lang.psiStructureViewFactory language="ANTLRTypeScript"
-									  implementationClass="org.antlr.jetbrains.sample.structview.TypeScriptStructureViewFactory"/>
-
-		<colorSettingsPage implementation="org.antlr.jetbrains.sample.TypeScriptColorSettingsPage"/>
-
-		<externalAnnotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptExternalAnnotator"/>
-
-		<annotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptDecoratorAnnotator"/>
-		<annotator language="ANTLRTypeScript" implementationClass="org.antlr.jetbrains.sample.AngularTemplateAnnotator"/>
-
-		<lang.findUsagesProvider language="ANTLRTypeScript"
-								 implementationClass="org.antlr.jetbrains.sample.TypeScriptFindUsagesProvider"/>
 		<psi.referenceContributor language="HTML"
 								 implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
 		<psi.referenceContributor language="XML"
 								  implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
-<!--		<completion.contributor language="HTML"-->
-<!--								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>-->
 		<completion.contributor language="any"
 								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
 		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularHtmlGotoDeclarationHandler"/>
