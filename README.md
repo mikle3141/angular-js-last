@@ -33,6 +33,7 @@ or align `ideaVersion` in `gradle.properties`.
 | Path | Role |
 |------|------|
 | `src/main/java/com/gigaide/angular/AngularPsiUtil.java` | Walks jsdecor PSI for `@Component` metadata |
-| `src/main/java/com/gigaide/angular/AngularSelectorIndex.java` | Project-wide selector index |
+| `src/main/java/com/gigaide/angular/AngularSelectorIndex.java` | Project-wide selector index (FileBasedIndex + scan fallback) |
+| `src/main/java/com/gigaide/angular/AngularComponentResourceIndex.java` | Reverse resource navigation (FileBasedIndex + scan fallback) |
 | `src/main/java/com/gigaide/angular/AngularHtml*.java` | HTML/XML cross-language navigation |
 | `src/test/testdata/` | Light test fixtures |

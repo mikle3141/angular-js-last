@@ -46,6 +46,7 @@
 		<completion.contributor language="XML"
 								implementationClass="com.gigaide.angular.AngularHtmlTagCompletionContributor"/>
 		<fileBasedIndex implementation="com.gigaide.angular.index.AngularComponentSelectorFileIndex"/>
+		<fileBasedIndex implementation="com.gigaide.angular.index.AngularComponentResourceFileIndex"/>
 		<gotoDeclarationHandler implementation="com.gigaide.angular.AngularHtmlGotoDeclarationHandler"/>
 		<gotoDeclarationHandler implementation="com.gigaide.angular.AngularResourceGotoDeclarationHandler"/>
 	</extensions>
