@@ -16,17 +16,15 @@ public final class AngularIndexScope {
         if (!file.isValid() || file.isDirectory() || isExcludedPath(file.getPath())) {
             return false;
         }
+        if (!"ts".equalsIgnoreCase(file.getExtension())) {
+            return false;
+        }
         ProjectFileIndex fileIndex = ProjectFileIndex.getInstance(project);
         if (fileIndex.isInSourceContent(file)) {
             return true;
         }
-        // Fallback: Angular CLI иногда помечает весь модуль как content root без src как source root.
-        return fileIndex.isInContent(file) && isLikelyProjectSource(file.getPath());
-    }
-
-    private static boolean isLikelyProjectSource(@NotNull String path) {
-        String normalized = path.replace('\\', '/');
-        return normalized.contains("/src/") && normalized.endsWith(".ts");
+        // Любой .ts в content roots (не только /src/) — типичные Angular/NX layouts.
+        return fileIndex.isInContent(file);
     }
 
     public static boolean isExcludedPath(@NotNull String path) {

@@ -12,14 +12,18 @@ import com.intellij.psi.SmartPsiElementPointer;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiModificationTracker;
+import com.intellij.util.indexing.FileBasedIndex;
+import org.antlr.jetbrains.sample.index.AngularComponentSelectorFileIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -34,13 +38,21 @@ public final class AngularSelectorIndex {
 
     @NotNull
     public static List<String> getAllSelectors(@NotNull Project project) {
-        return getOrBuildIndex(project).allSelectors();
+        List<String> fromFileIndex = collectAllSelectorsFromFileIndex(project);
+        if (!fromFileIndex.isEmpty()) {
+            return fromFileIndex;
+        }
+        return getOrBuildScanIndex(project).allSelectors();
     }
 
     @Nullable
     public static PsiElement resolveSelector(@NotNull Project project, @NotNull String selector) {
-        SelectorIndex index = getOrBuildIndex(project);
-        LOG.debug("[AngularSelector] resolveSelector: '" + selector + "', index size=" + index.allSelectors().size());
+        PsiElement fromFileIndex = resolveSelectorFromFileIndex(project, selector);
+        if (fromFileIndex != null) {
+            return fromFileIndex;
+        }
+        SelectorIndex index = getOrBuildScanIndex(project);
+        LOG.debug("[AngularSelector] resolveSelector: '" + selector + "', scan index size=" + index.allSelectors().size());
         PsiElement result = index.resolve(selector);
         if (result != null) {
             LOG.debug("[AngularSelector] resolved selector '" + selector + "' to "
@@ -49,20 +61,71 @@ public final class AngularSelectorIndex {
         return result;
     }
 
-    private static @NotNull SelectorIndex getOrBuildIndex(@NotNull Project project) {
+    @Nullable
+    private static PsiElement resolveSelectorFromFileIndex(@NotNull Project project, @NotNull String selector) {
+        GlobalSearchScope scope = GlobalSearchScope.projectScope(project);
+        Collection<VirtualFile> files = FileBasedIndex.getInstance()
+                .getContainingFiles(AngularComponentSelectorFileIndex.NAME, selector, scope);
+        if (files.isEmpty()) {
+            return null;
+        }
+        PsiManager psiManager = PsiManager.getInstance(project);
+        for (VirtualFile vf : files) {
+            if (!AngularIndexScope.isAngularIndexableFile(project, vf)) {
+                continue;
+            }
+            PsiFile file = psiManager.findFile(vf);
+            if (file == null) {
+                continue;
+            }
+            PsiElement[] target = new PsiElement[1];
+            AngularPsiUtil.collectComponentSelectors(file, (s, literal) -> {
+                if (selector.equals(s) && target[0] == null) {
+                    target[0] = literal;
+                }
+            });
+            if (target[0] != null) {
+                return target[0];
+            }
+        }
+        return null;
+    }
+
+    @NotNull
+    private static List<String> collectAllSelectorsFromFileIndex(@NotNull Project project) {
+        Set<String> selectors = new LinkedHashSet<>();
+        GlobalSearchScope scope = GlobalSearchScope.projectScope(project);
+        FileBasedIndex.getInstance().processAllKeys(
+                AngularComponentSelectorFileIndex.NAME,
+                key -> {
+                    if (!FileBasedIndex.getInstance()
+                            .getContainingFiles(AngularComponentSelectorFileIndex.NAME, key, scope).isEmpty()) {
+                        selectors.add(key);
+                    }
+                    return true;
+                },
+                project
+        );
+        if (selectors.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return selectors.stream().sorted().collect(Collectors.toList());
+    }
+
+    private static @NotNull SelectorIndex getOrBuildScanIndex(@NotNull Project project) {
         long currentModCount = PsiModificationTracker.getInstance(project).getModificationCount();
         SelectorIndexCache cache = project.getUserData(SELECTOR_INDEX_KEY);
         if (cache != null && cache.modificationCount == currentModCount) {
             return cache.index;
         }
-        SelectorIndex rebuilt = buildIndex(project);
+        SelectorIndex rebuilt = buildScanIndex(project);
         project.putUserData(SELECTOR_INDEX_KEY, new SelectorIndexCache(currentModCount, rebuilt));
         return rebuilt;
     }
 
-    private static @NotNull SelectorIndex buildIndex(@NotNull Project project) {
+    private static @NotNull SelectorIndex buildScanIndex(@NotNull Project project) {
         Collection<VirtualFile> files = FilenameIndex.getAllFilesByExt(project, "ts", GlobalSearchScope.projectScope(project));
-        LOG.debug("[AngularSelector] building index from ts files=" + files.size());
+        LOG.debug("[AngularSelector] building scan index from ts files=" + files.size());
         Map<String, SmartPsiElementPointer<PsiElement>> selectors = new LinkedHashMap<>();
 
         PsiManager psiManager = PsiManager.getInstance(project);
@@ -76,7 +139,7 @@ public final class AngularSelectorIndex {
             }
             collectSelectors(project, file, selectors);
         }
-        LOG.debug("[AngularSelector] index built size=" + selectors.size());
+        LOG.debug("[AngularSelector] scan index built size=" + selectors.size());
         return new SelectorIndex(selectors);
     }
 

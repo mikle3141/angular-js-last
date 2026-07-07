@@ -14,6 +14,12 @@ GigaIDE JS/TS (`com.gigaide.javascript`) for TypeScript PSI and adds:
 - Built `com.gigaide.javascript` plugin ZIP (see `jsdecorPluginZip` in `gradle.properties`)
 - `com.gigaide.pro` JAR (see `gigaideProJar` in `gradle.properties`)
 
+## Platform version note
+
+The plugin targets IC `2025.1.3` while jsdecor may be built against an older SDK.
+If you see PSI or plugin-load errors, rebuild jsdecor with the same `platformVersion`
+or align `ideaVersion` in `gradle.properties`.
+
 ## Build and run
 
 ```bash

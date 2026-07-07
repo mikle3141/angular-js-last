@@ -177,6 +177,10 @@ public final class AngularPsiUtil {
             if (argument instanceof JsObjectLiteralExpression objectLiteral) {
                 return objectLiteral;
             }
+            JsObjectLiteralExpression nested = PsiTreeUtil.findChildOfType(argument, JsObjectLiteralExpression.class);
+            if (nested != null) {
+                return nested;
+            }
         }
         return null;
     }
@@ -184,14 +188,14 @@ public final class AngularPsiUtil {
     @Nullable
     private static JsCallExpression getDecoratorCallExpression(@NotNull PsiElement componentDecorator) {
         if (componentDecorator instanceof JsDecorator decorator) {
-            return PsiTreeUtil.findChildOfType(decorator, JsCallExpression.class);
+            return PsiTreeUtil.getChildOfType(decorator, JsCallExpression.class);
         }
         return PsiTreeUtil.getParentOfType(componentDecorator, JsCallExpression.class);
     }
 
     @NotNull
     private static String getDecoratorName(@NotNull JsDecorator decorator) {
-        JsCallExpression call = PsiTreeUtil.findChildOfType(decorator, JsCallExpression.class);
+        JsCallExpression call = PsiTreeUtil.getChildOfType(decorator, JsCallExpression.class);
         if (call == null) {
             return decorator.getText();
         }

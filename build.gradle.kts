@@ -59,6 +59,7 @@ intellijPlatform {
             untilBuild = properties("pluginUntilBuild")
         }
     }
+    buildSearchableOptions = false
 }
 
 tasks.named("verifyPluginProjectConfiguration") {

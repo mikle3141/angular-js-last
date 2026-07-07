@@ -41,8 +41,11 @@
 								 implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
 		<psi.referenceContributor language="XML"
 								  implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
-		<completion.contributor language="any"
+		<completion.contributor language="HTML"
 								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
+		<completion.contributor language="XML"
+								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
+		<fileBasedIndex implementation="org.antlr.jetbrains.sample.index.AngularComponentSelectorFileIndex"/>
 		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularHtmlGotoDeclarationHandler"/>
 		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularResourceGotoDeclarationHandler"/>
 	</extensions>
