@@ -23,7 +23,7 @@
 
 	<project-components>
 		<component>
-			<implementation-class>org.antlr.jetbrains.sample.SamplePluginController</implementation-class>
+			<implementation-class>com.gigaide.angular.SamplePluginController</implementation-class>
 		</component>
 	</project-components>
 
@@ -31,22 +31,22 @@
 	</actions>
 
 	<extensions defaultExtensionNs="com.intellij">
-		<annotator language="TypeScript" implementationClass="org.antlr.jetbrains.sample.TypeScriptDecoratorAnnotator"/>
-		<annotator language="TypeScript" implementationClass="org.antlr.jetbrains.sample.AngularTemplateAnnotator"/>
+		<annotator language="TypeScript" implementationClass="com.gigaide.angular.TypeScriptDecoratorAnnotator"/>
+		<annotator language="TypeScript" implementationClass="com.gigaide.angular.AngularTemplateAnnotator"/>
 
 		<psi.referenceContributor language="TypeScript"
-								  implementation="org.antlr.jetbrains.sample.AngularComponentResourceReferenceContributor"/>
+								  implementation="com.gigaide.angular.AngularComponentResourceReferenceContributor"/>
 
 		<psi.referenceContributor language="HTML"
-								 implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
+								 implementation="com.gigaide.angular.AngularHtmlTagReferenceContributor"/>
 		<psi.referenceContributor language="XML"
-								  implementation="org.antlr.jetbrains.sample.AngularHtmlTagReferenceContributor"/>
+								  implementation="com.gigaide.angular.AngularHtmlTagReferenceContributor"/>
 		<completion.contributor language="HTML"
-								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
+								implementationClass="com.gigaide.angular.AngularHtmlTagCompletionContributor"/>
 		<completion.contributor language="XML"
-								implementationClass="org.antlr.jetbrains.sample.AngularHtmlTagCompletionContributor"/>
-		<fileBasedIndex implementation="org.antlr.jetbrains.sample.index.AngularComponentSelectorFileIndex"/>
-		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularHtmlGotoDeclarationHandler"/>
-		<gotoDeclarationHandler implementation="org.antlr.jetbrains.sample.AngularResourceGotoDeclarationHandler"/>
+								implementationClass="com.gigaide.angular.AngularHtmlTagCompletionContributor"/>
+		<fileBasedIndex implementation="com.gigaide.angular.index.AngularComponentSelectorFileIndex"/>
+		<gotoDeclarationHandler implementation="com.gigaide.angular.AngularHtmlGotoDeclarationHandler"/>
+		<gotoDeclarationHandler implementation="com.gigaide.angular.AngularResourceGotoDeclarationHandler"/>
 	</extensions>
 </idea-plugin>
